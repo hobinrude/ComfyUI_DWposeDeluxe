@@ -35,11 +35,11 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
 2.  Clone this repository into the `custom_nodes` folder:
     ```bash
     cd ComfyUI/custom_nodes/
-    git clone <YOUR_REPOSITORY_URL_HERE> comfyui_dwpose_deluxe
+    git clone https://github.com/hobinrude/ComfyUI_DWposeDeluxe
     ```
 3.  Navigate into the newly cloned directory:
     ```bash
-    cd comfyui_dwpose_deluxe
+    cd ComfyUI_DWposeDeluxe
     ```
 4.  Install the required dependencies:
      ( assumes CUDA 12.X by default )
