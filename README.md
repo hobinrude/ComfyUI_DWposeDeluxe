@@ -1,9 +1,10 @@
-<<<<<<< HEAD
 # ComfyUI DWpose Deluxe
 
 **Pre-release sneak-peek**
 
 A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole-Body Pose Estimation) model for high-quality pose detection. This node supports both CPU (ONNX) and high-performance GPU (TensorRT) execution, with automatic model downloading and engine building. Runs on average 20x faster than pose estimators without TensorRT engine booster. Added functionality for drawing feet, composite image with optional frame count for pose debugging, json dataset output and json converter node.
+
+![example](https://github.com/user-attachments/assets/c31ebb40-4bee-4922-b8b8-4e5333773d9a)
 
 ## Key Features
 
@@ -61,6 +62,8 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
 
 **Basic Example Workflow Included**
 
+![Workflow Example](pixels/workflow.png)
+
 ## Dependencies
 
 This node requires the following Python libraries:
@@ -76,6 +79,11 @@ colored
 
 These can be installed by running `pip install -r requirements.txt` from within the node's directory.
 If you're using CUDA 11.X or 13.X modify the TensorRT version in `requirements.txt` accordingly.
+
+or install manually with:
+`pip install tensorrt-cu11`
+`pip install tensorrt-cu13`
+
 To use without GPU support a CPU `onnxruntime` is needed. Manually change it in `requirements.txt`.
 
 ### Acknowledgements & License
@@ -92,9 +100,3 @@ This means:
 -   You must give appropriate credit (Attribution).
 -   You may not use this material for commercial purposes (NonCommercial).
 -   If you remix, transform, or build upon the material, you must distribute your contributions under the same license (ShareAlike).
-=======
-# ComfyUI_DWposeDeluxe
-DWpose estimation with added feet, json output and other useful customization features. Ultra fast inference powered by TensorRT engine resulting in 20x faster pose estimation compared to regular ONNX inference.
-
-![example](https://github.com/user-attachments/assets/bef7033a-149a-42c3-bb06-da7882dde068)
->>>>>>> 5875fb379e8428a30278aad0a6cf9e003f82f733
