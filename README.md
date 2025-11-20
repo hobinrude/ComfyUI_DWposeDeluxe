@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ComfyUI DWpose Deluxe
 
 **Pre-release sneak-peek**
@@ -91,3 +92,9 @@ This means:
 -   You must give appropriate credit (Attribution).
 -   You may not use this material for commercial purposes (NonCommercial).
 -   If you remix, transform, or build upon the material, you must distribute your contributions under the same license (ShareAlike).
+=======
+# ComfyUI_DWposeDeluxe
+DWpose estimation with added feet, json output and other useful customization features. Ultra fast inference powered by TensorRT engine resulting in 20x faster pose estimation compared to regular ONNX inference.
+
+![example](https://github.com/user-attachments/assets/bef7033a-149a-42c3-bb06-da7882dde068)
+>>>>>>> 5875fb379e8428a30278aad0a6cf9e003f82f733
