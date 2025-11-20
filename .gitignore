@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# ComfyUI specific outputs
+output/
+temp/
+
+# TensorRT build artifacts
+*.trt
+build/
+.cache/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# Logs
+*.log
+
+# Jupyter Notebooks (if any)
+.ipynb_checkpoints
+
+# Custom node specific (if any)
+# For example, if models are downloaded directly into the custom_nodes folder
+# models/
