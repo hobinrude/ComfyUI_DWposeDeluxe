@@ -117,7 +117,7 @@ To use without GPU support a CPU `onnxruntime` is needed. Manually change it in 
 - 2025-11-26
   - Major UI and inference bugfixes
   - Improved console logging
-  - Sepate node for frame numbers
+  - Separate node for frame numbers
 
 
 ## Known issues
