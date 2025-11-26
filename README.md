@@ -112,7 +112,20 @@ or install manually with:
 To use without GPU support a CPU `onnxruntime` is needed. Manually change it in `requirements.txt`.
 
 
-### Acknowledgements & License
+## Changelog
+
+- 2025-11-26
+  - Major UI and inference bugfixes
+  - Improved console logging
+  - Sepate node for frame numbers
+
+
+## Known issues
+
+- Converter node not fully operational yet
+
+
+## Acknowledgements & License
 
 This project is heavily based on the work of **yuvraj108c** and his original **[ComfyUI-Dwpose-Tensorrt](https://github.com/yuvraj108c/ComfyUI-Dwpose-Tensorrt)** repository. Big chunks of code have been repurposed straight from his project.
 
