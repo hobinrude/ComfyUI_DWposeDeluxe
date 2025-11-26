@@ -106,7 +106,7 @@ If you're using CUDA 11.X or 13.X modify the TensorRT version in `requirements.t
 
 or install manually with:
 `pip install tensorrt-cu11`
-`pis install tensorrt-cu12`
+`pip install tensorrt-cu12`
 `pip install tensorrt-cu13`
 
 To use without GPU support a CPU `onnxruntime` is needed. Manually change it in `requirements.txt`.
