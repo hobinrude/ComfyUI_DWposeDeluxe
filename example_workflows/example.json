@@ -1,22 +1,216 @@
 {
-  "id": "421b0fe6-8398-4899-8ecc-bceeb4cc22eb",
+  "id": "b58c0962-5055-4cb2-b6e1-4ac1d457ad31",
   "revision": 0,
-  "last_node_id": 13,
-  "last_link_id": 39,
+  "last_node_id": 7,
+  "last_link_id": 15,
   "nodes": [
     {
-      "id": 8,
+      "id": 3,
       "type": "VHS_VideoCombine",
       "pos": [
-        1511.7742992900012,
-        -120.75828809999994
+        1322.8493269360533,
+        1073.280123913791
       ],
       "size": [
-        272.8817987060547,
-        490.2460117721558
+        211.1717987060547,
+        539.1717987060547
       ],
       "flags": {},
-      "order": 6,
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 7
+        },
+        {
+          "name": "meta_batch",
+          "shape": 7,
+          "type": "VHS_BatchManager",
+          "link": null
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        },
+        {
+          "name": "frame_rate",
+          "type": "FLOAT",
+          "widget": {
+            "name": "frame_rate"
+          },
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-videohelpersuite",
+        "ver": "8923bd836bdab8b7bbdf4ed104b7d045e70c66e2",
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 8,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": false,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "AnimateDiff_00004.mp4",
+            "subfolder": "",
+            "type": "temp",
+            "format": "video/h264-mp4",
+            "frame_rate": 25,
+            "workflow": "AnimateDiff_00004.png",
+            "fullpath": "/home/paw37ski/github/ComfyUI/temp/AnimateDiff_00004.mp4"
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "DWposeDeluxeNode",
+      "pos": [
+        942.040639004902,
+        1031.948930689284
+      ],
+      "size": [
+        284.5865234375,
+        350
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1
+        },
+        {
+          "name": "frame_count",
+          "shape": 7,
+          "type": "INT",
+          "link": 2
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 3
+        },
+        {
+          "name": "video_info",
+          "shape": 7,
+          "type": "VHS_VIDEOINFO",
+          "link": 4
+        },
+        {
+          "name": "weight_options",
+          "shape": 7,
+          "type": "DWOPOSE_OPTIONS",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_image",
+          "type": "IMAGE",
+          "links": [
+            10
+          ]
+        },
+        {
+          "name": "blend_image",
+          "type": "IMAGE",
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "source_image",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            7,
+            11,
+            12
+          ]
+        },
+        {
+          "name": "frame_rate",
+          "type": "FLOAT",
+          "links": [
+            6,
+            13,
+            14
+          ]
+        },
+        {
+          "name": "keypoints",
+          "type": "POSE_KEYPOINT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "hobinrude/ComfyUI_DWposeDeluxe",
+        "ver": "4cef9e52b82ce16f460b31a742196976e62e6de2",
+        "Node name for S&R": "DWposeDeluxeNode"
+      },
+      "widgets_values": [
+        1,
+        true,
+        true,
+        true,
+        true,
+        "CPU",
+        "fp32",
+        "yolox_l.onnx",
+        "dw-ll_ucoco_384.onnx",
+        false
+      ]
+    },
+    {
+      "id": 6,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        1861.9416650277144,
+        996.1548376628514
+      ],
+      "size": [
+        211.1717987060547,
+        539.1717987060547
+      ],
+      "flags": {},
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -28,7 +222,7 @@
           "name": "audio",
           "shape": 7,
           "type": "AUDIO",
-          "link": 35
+          "link": 12
         },
         {
           "name": "meta_batch",
@@ -48,7 +242,7 @@
           "widget": {
             "name": "frame_rate"
           },
-          "link": 36
+          "link": 14
         }
       ],
       "outputs": [
@@ -61,8 +255,7 @@
       "properties": {
         "cnr_id": "comfyui-videohelpersuite",
         "ver": "8923bd836bdab8b7bbdf4ed104b7d045e70c66e2",
-        "Node name for S&R": "VHS_VideoCombine",
-        "aux_id": "Kosinkadink/ComfyUI-VideoHelperSuite"
+        "Node name for S&R": "VHS_VideoCombine"
       },
       "widgets_values": {
         "frame_rate": 8,
@@ -79,352 +272,27 @@
           "hidden": false,
           "paused": false,
           "params": {
-            "filename": "AnimateDiff_00008.mp4",
+            "filename": "AnimateDiff_00005.mp4",
             "subfolder": "",
             "type": "temp",
             "format": "video/h264-mp4",
-            "frame_rate": 15,
-            "workflow": "AnimateDiff_00008.png",
-            "fullpath": "/home/paw37ski/ComfyUI/temp/AnimateDiff_00008.mp4"
+            "frame_rate": 25,
+            "workflow": "AnimateDiff_00005.png",
+            "fullpath": "/home/paw37ski/github/ComfyUI/temp/AnimateDiff_00005.mp4"
           }
         }
       }
-    },
-    {
-      "id": 9,
-      "type": "PlaySound|pysssss",
-      "pos": [
-        872.9876103159872,
-        -166.18503314043392
-      ],
-      "size": [
-        270,
-        106
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 3,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 30
-        }
-      ],
-      "outputs": [
-        {
-          "name": "*",
-          "shape": 6,
-          "type": "*",
-          "links": [
-            10
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-custom-scripts",
-        "ver": "f2838ed5e59de4d73cde5c98354b87a8d3200190",
-        "Node name for S&R": "PlaySound|pysssss",
-        "aux_id": "pythongosssss/ComfyUI-Custom-Scripts"
-      },
-      "widgets_values": [
-        "always",
-        0.5,
-        "notify.mp3"
-      ]
-    },
-    {
-      "id": 4,
-      "type": "VHS_VideoCombine",
-      "pos": [
-        1193.3842992900006,
-        -118.49828809999998
-      ],
-      "size": [
-        272.8817987060547,
-        490.2460117721558
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 39
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 34
-        },
-        {
-          "name": "meta_batch",
-          "shape": 7,
-          "type": "VHS_BatchManager",
-          "link": null
-        },
-        {
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        },
-        {
-          "name": "frame_rate",
-          "type": "FLOAT",
-          "widget": {
-            "name": "frame_rate"
-          },
-          "link": 37
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Filenames",
-          "type": "VHS_FILENAMES",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-videohelpersuite",
-        "ver": "8923bd836bdab8b7bbdf4ed104b7d045e70c66e2",
-        "Node name for S&R": "VHS_VideoCombine",
-        "aux_id": "Kosinkadink/ComfyUI-VideoHelperSuite"
-      },
-      "widgets_values": {
-        "frame_rate": 8,
-        "loop_count": 0,
-        "filename_prefix": "AnimateDiff",
-        "format": "video/h264-mp4",
-        "pix_fmt": "yuv420p",
-        "crf": 19,
-        "save_metadata": true,
-        "trim_to_audio": false,
-        "pingpong": false,
-        "save_output": false,
-        "videopreview": {
-          "hidden": false,
-          "paused": false,
-          "params": {
-            "filename": "AnimateDiff_00009.mp4",
-            "subfolder": "",
-            "type": "temp",
-            "format": "video/h264-mp4",
-            "frame_rate": 15,
-            "workflow": "AnimateDiff_00009.png",
-            "fullpath": "/home/paw37ski/ComfyUI/temp/AnimateDiff_00009.mp4"
-          }
-        }
-      }
-    },
-    {
-      "id": 11,
-      "type": "VHS_VideoCombine",
-      "pos": [
-        872.89429929,
-        -118.62986928230706
-      ],
-      "size": [
-        272.8817987060547,
-        490.2460117721558
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 31
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 32
-        },
-        {
-          "name": "meta_batch",
-          "shape": 7,
-          "type": "VHS_BatchManager",
-          "link": null
-        },
-        {
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        },
-        {
-          "name": "frame_rate",
-          "type": "FLOAT",
-          "widget": {
-            "name": "frame_rate"
-          },
-          "link": 33
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Filenames",
-          "type": "VHS_FILENAMES",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-videohelpersuite",
-        "ver": "8923bd836bdab8b7bbdf4ed104b7d045e70c66e2",
-        "Node name for S&R": "VHS_VideoCombine",
-        "aux_id": "Kosinkadink/ComfyUI-VideoHelperSuite"
-      },
-      "widgets_values": {
-        "frame_rate": 8,
-        "loop_count": 0,
-        "filename_prefix": "AnimateDiff",
-        "format": "video/h264-mp4",
-        "pix_fmt": "yuv420p",
-        "crf": 19,
-        "save_metadata": true,
-        "trim_to_audio": false,
-        "pingpong": false,
-        "save_output": false,
-        "videopreview": {
-          "hidden": false,
-          "paused": false,
-          "params": {
-            "filename": "AnimateDiff_00007.mp4",
-            "subfolder": "",
-            "type": "temp",
-            "format": "video/h264-mp4",
-            "frame_rate": 15,
-            "workflow": "AnimateDiff_00007.png",
-            "fullpath": "/home/paw37ski/ComfyUI/temp/AnimateDiff_00007.mp4"
-          }
-        }
-      }
-    },
-    {
-      "id": 13,
-      "type": "DWposeDeluxeNode",
-      "pos": [
-        512.1394209556665,
-        -194.9632625564462
-      ],
-      "size": [
-        307,
-        398
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 26
-        },
-        {
-          "name": "frame_count",
-          "shape": 7,
-          "type": "INT",
-          "link": 27
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 28
-        },
-        {
-          "name": "video_info",
-          "shape": 7,
-          "type": "VHS_VIDEOINFO",
-          "link": 29
-        },
-        {
-          "name": "weight_options",
-          "shape": 7,
-          "type": "DWOPOSE_OPTIONS",
-          "link": 38
-        }
-      ],
-      "outputs": [
-        {
-          "name": "pose_image",
-          "type": "IMAGE",
-          "links": [
-            30
-          ]
-        },
-        {
-          "name": "blend_image",
-          "type": "IMAGE",
-          "links": [
-            39
-          ]
-        },
-        {
-          "name": "source_image",
-          "type": "IMAGE",
-          "links": [
-            31
-          ]
-        },
-        {
-          "name": "audio",
-          "type": "AUDIO",
-          "links": [
-            32,
-            34,
-            35
-          ]
-        },
-        {
-          "name": "frame_rate",
-          "type": "FLOAT",
-          "links": [
-            33,
-            36,
-            37
-          ]
-        },
-        {
-          "name": "keypoints",
-          "type": "POSE_KEYPOINT",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "DWposeDeluxeNode"
-      },
-      "widgets_values": [
-        1,
-        true,
-        true,
-        true,
-        true,
-        "TR",
-        "GPU",
-        "fp32",
-        "yolox_l_fp32.trt",
-        "dw-ll_ucoco_384_fp32.trt",
-        false
-      ]
     },
     {
       "id": 1,
       "type": "VHS_LoadVideo",
       "pos": [
-        157.19889928999999,
-        -195.0629881000001
+        623.0733553494139,
+        1031.948930689285
       ],
       "size": [
-        294.6744549560547,
-        478.09787272580115
+        242.6444549560547,
+        547.1447795739334
       ],
       "flags": {},
       "order": 0,
@@ -448,43 +316,42 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            26
+            1
           ]
         },
         {
           "name": "frame_count",
           "type": "INT",
           "links": [
-            27
+            2
           ]
         },
         {
           "name": "audio",
           "type": "AUDIO",
           "links": [
-            28
+            3
           ]
         },
         {
           "name": "video_info",
           "type": "VHS_VIDEOINFO",
           "links": [
-            29
+            4
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfyui-videohelpersuite",
         "ver": "8923bd836bdab8b7bbdf4ed104b7d045e70c66e2",
-        "Node name for S&R": "VHS_LoadVideo",
-        "aux_id": "Kosinkadink/ComfyUI-VideoHelperSuite"
+        "Node name for S&R": "VHS_LoadVideo"
       },
       "widgets_values": {
-        "video": "part_01.mp4",
+        "video": "skibi-smooth.mp4",
         "force_rate": 0,
         "custom_width": 0,
         "custom_height": 0,
-        "frame_load_cap": 0,
+        "frame_load_cap": 1,
         "skip_first_frames": 0,
         "select_every_nth": 1,
         "format": "None",
@@ -493,28 +360,156 @@
           "hidden": false,
           "paused": false,
           "params": {
+            "filename": "skibi-smooth.mp4",
+            "type": "input",
+            "format": "video/mp4",
             "force_rate": 0,
             "custom_width": 0,
             "custom_height": 0,
-            "frame_load_cap": 0,
+            "frame_load_cap": 1,
             "skip_first_frames": 0,
-            "select_every_nth": 1,
-            "filename": "part_01.mp4",
-            "type": "input",
-            "format": "video/mp4"
+            "select_every_nth": 1
           }
         }
       }
     },
     {
-      "id": 6,
-      "type": "DWposeWeightOptions",
+      "id": 5,
+      "type": "FrameNumberNode",
       "pos": [
-        513.9305446927211,
-        294.8473062264915
+        1299.120236026963,
+        834.2544875501542
       ],
       "size": [
-        309.974609375,
+        230,
+        154
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "hobinrude/ComfyUI_DWposeDeluxe",
+        "ver": "4cef9e52b82ce16f460b31a742196976e62e6de2",
+        "Node name for S&R": "FrameNumberNode"
+      },
+      "widgets_values": [
+        true,
+        "bottom-left",
+        64,
+        "arial.ttf",
+        0.8
+      ]
+    },
+    {
+      "id": 4,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        1592.3947814815083,
+        1059.5621813683363
+      ],
+      "size": [
+        211.1717987060547,
+        539.1717987060547
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 11
+        },
+        {
+          "name": "meta_batch",
+          "shape": 7,
+          "type": "VHS_BatchManager",
+          "link": null
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        },
+        {
+          "name": "frame_rate",
+          "type": "FLOAT",
+          "widget": {
+            "name": "frame_rate"
+          },
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-videohelpersuite",
+        "ver": "8923bd836bdab8b7bbdf4ed104b7d045e70c66e2",
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 8,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": false,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "AnimateDiff_00006.mp4",
+            "subfolder": "",
+            "type": "temp",
+            "format": "video/h264-mp4",
+            "frame_rate": 25,
+            "workflow": "AnimateDiff_00006.png",
+            "fullpath": "/home/paw37ski/github/ComfyUI/temp/AnimateDiff_00006.mp4"
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "WeightOptions",
+      "pos": [
+        953.2519094920276,
+        1456.5082339994406
+      ],
+      "size": [
+        270.04460937499994,
         154
       ],
       "flags": {},
@@ -526,155 +521,157 @@
           "name": "options",
           "type": "DWOPOSE_OPTIONS",
           "links": [
-            38
+            15
           ]
         }
       ],
       "properties": {
-        "Node name for S&R": "DWposeWeightOptions"
+        "aux_id": "hobinrude/ComfyUI_DWposeDeluxe",
+        "ver": "4cef9e52b82ce16f460b31a742196976e62e6de2",
+        "Node name for S&R": "WeightOptions"
       },
       "widgets_values": [
+        1,
+        1,
+        -2,
         0,
-        -1,
-        -3,
-        -1,
-        -2
+        -1
       ]
     }
   ],
   "links": [
     [
-      10,
-      9,
+      1,
+      1,
       0,
-      8,
+      2,
       0,
       "IMAGE"
     ],
     [
-      26,
-      1,
-      0,
-      13,
-      0,
-      "IMAGE"
-    ],
-    [
-      27,
+      2,
       1,
       1,
-      13,
+      2,
       1,
       "INT"
     ],
     [
-      28,
+      3,
       1,
       2,
-      13,
+      2,
       2,
       "AUDIO"
     ],
     [
-      29,
+      4,
       1,
       3,
-      13,
+      2,
       3,
       "VHS_VIDEOINFO"
     ],
     [
-      30,
-      13,
-      0,
-      9,
-      0,
-      "*"
-    ],
-    [
-      31,
-      13,
+      5,
       2,
-      11,
+      2,
+      3,
       0,
       "IMAGE"
     ],
     [
-      32,
-      13,
-      3,
-      11,
-      1,
-      "AUDIO"
-    ],
-    [
-      33,
-      13,
+      6,
+      2,
       4,
-      11,
+      3,
       4,
       "FLOAT"
     ],
     [
-      34,
-      13,
+      7,
+      2,
       3,
-      4,
+      3,
       1,
       "AUDIO"
     ],
     [
-      35,
-      13,
-      3,
       8,
+      2,
       1,
-      "AUDIO"
+      5,
+      0,
+      "IMAGE"
     ],
     [
-      36,
-      13,
+      9,
+      5,
+      0,
       4,
-      8,
-      4,
-      "FLOAT"
+      0,
+      "IMAGE"
     ],
     [
-      37,
-      13,
-      4,
-      4,
-      4,
-      "FLOAT"
-    ],
-    [
-      38,
+      10,
+      2,
+      0,
       6,
       0,
-      13,
-      4,
-      "DWOPOSE_OPTIONS"
+      "IMAGE"
     ],
     [
-      39,
-      13,
-      1,
+      11,
+      2,
+      3,
       4,
+      1,
+      "AUDIO"
+    ],
+    [
+      12,
+      2,
+      3,
+      6,
+      1,
+      "AUDIO"
+    ],
+    [
+      13,
+      2,
+      4,
+      4,
+      4,
+      "FLOAT"
+    ],
+    [
+      14,
+      2,
+      4,
+      6,
+      4,
+      "FLOAT"
+    ],
+    [
+      15,
+      7,
       0,
-      "IMAGE"
+      2,
+      4,
+      "DWOPOSE_OPTIONS"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.6830134553650709,
+      "scale": 0.6934334949441333,
       "offset": [
-        -22.060499289999996,
-        336.05778810000004
+        -407.04204075812453,
+        -639.8258213876187
       ]
     },
-    "frontendVersion": "1.28.8",
+    "frontendVersion": "1.30.6",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,

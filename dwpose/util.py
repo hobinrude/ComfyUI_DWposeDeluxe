@@ -42,28 +42,22 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
         [85, 0, 255], [0, 170, 255], [0, 170, 255], [0, 170, 255],
     ]
 
-    # Define ankle and foot point indices for color mapping (0-based)
     R_ANKLE_IDX = 10
     L_ANKLE_IDX = 13
-    # Joint indices for left foot (including LAnkle)
     LEFT_FOOT_JOINTS = {L_ANKLE_IDX, 18, 19, 20} # LAnkle, LBigToe, LSmToe, LHeel
-    # Joint indices for right foot (including RAnkle)
     RIGHT_FOOT_JOINTS = {R_ANKLE_IDX, 21, 22, 23} # RAnkle, RBigToe, RSmToe, RHeel
 
-    # Draw bones
     for i in range(len(limbSeq)):
         limb = limbSeq[i]
         limb_indices = np.array(limb) - 1
         p1_idx, p2_idx = limb_indices[0], limb_indices[1]
 
-        # Determine bone color
         color_to_use = None
         if (p1_idx in LEFT_FOOT_JOINTS or p2_idx in LEFT_FOOT_JOINTS):
             color_to_use = colors[L_ANKLE_IDX]
         elif (p1_idx in RIGHT_FOOT_JOINTS or p2_idx in RIGHT_FOOT_JOINTS):
             color_to_use = colors[R_ANKLE_IDX]
         else:
-            # For non-foot bones, use the sequential color
             color_to_use = colors[i]
 
         cv_color = (int(color_to_use[0]), int(color_to_use[1]), int(color_to_use[2]))
@@ -87,17 +81,15 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
 
     canvas = (canvas * 0.6).astype(np.uint8)
 
-    # Draw Dots
     num_total_points = 24
     for i in range(num_total_points):
-        # Determine dot color
+
         color_to_use = None
         if i in LEFT_FOOT_JOINTS:
             color_to_use = colors[L_ANKLE_IDX]
         elif i in RIGHT_FOOT_JOINTS:
             color_to_use = colors[R_ANKLE_IDX]
         else:
-            # For non-foot points, use the sequential color
             color_to_use = colors[i]
 
         cv_color = (int(color_to_use[0]), int(color_to_use[1]), int(color_to_use[2]))

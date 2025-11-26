@@ -2,11 +2,11 @@
 
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-from colored import fg, attr
 import numpy as np
 import json
 from . import util
 from .wholebody import Wholebody
+from ..scripts import logger
 
 # TensorRT Imports
 tensorrt_available = False
@@ -20,7 +20,7 @@ except ImportError:
 if tensorrt_available:
     from ..trt.trt_utilities import Engine
 
-def draw_pose(pose, H, W, show_face=True, show_hands=True, show_feet=True, options={}):
+def draw_pose(pose, H, W, show_body=True, show_face=True, show_hands=True, show_feet=True, options={}):
     bodies = pose['bodies']
     faces = pose['faces']
     hands = pose['hands']
@@ -28,10 +28,11 @@ def draw_pose(pose, H, W, show_face=True, show_hands=True, show_feet=True, optio
     subset = bodies['subset']
     canvas = np.zeros(shape=(H, W, 3), dtype=np.uint8)
 
-    if isinstance(candidate, np.ndarray) and isinstance(subset, np.ndarray) and candidate.size > 0 and subset.size > 0:
-        canvas = util.draw_bodypose(canvas, candidate, subset, show_feet=show_feet, options=options)
-    else:
-        print("[DrawPose][{fg('yellow')}WARNING{attr('reset')}] Skipping body/feet drawing due to empty candidate or subset.")
+    if show_body:
+        if isinstance(candidate, np.ndarray) and isinstance(subset, np.ndarray) and candidate.size > 0 and subset.size > 0:
+            canvas = util.draw_bodypose(canvas, candidate, subset, show_feet=show_feet, options=options)
+        else:
+            logger.warning(f"Skipping body/feet drawing due to empty candidate or subset")
 
     if show_hands and isinstance(hands, list) and len(hands) > 0:
         canvas = util.draw_handpose(canvas, hands, options=options)
@@ -305,13 +306,13 @@ class DWposeDetector:
 
         if self.model_type == "TensorRT":
             if not tensorrt_available:
-                raise ImportError("[DWposeDetector][{fg('red')}ERROR{attr('reset')}] TensorRT backend requested but 'tensorrt' module is not available. \nPlease install TensorRT.")
-            print(f"[DWposeDetector][{fg('green')}INFO{attr('reset')}] Initializing TensorRT backend for {provider_type}")
+                raise ImportError("TensorRT backend requested but 'tensorrt' module is not available\nPlease install TensorRT")
+            logger.info(f"Initializing TensorRT backend for {provider_type}")
 
             if self.det_engine is None or self.pose_engine is None:
-                raise ValueError("[DWposeDetector][{fg('red')}ERROR{attr('reset')}] TensorRT engines must be provided for TensorRT model_type.")
+                raise ValueError("TensorRT engines must be provided for TensorRT model_type")
         else: # ONNX backend
-            print(f"[DWposeDetector][{fg('green')}INFO{attr('reset')}] Initializing ONNX backend for {provider_type}")
+            logger.info(f"Initializing ONNX backend for {provider_type}")
 
             self.pose_estimation = Wholebody(
                 provider_type=provider_type,
@@ -333,7 +334,7 @@ class DWposeDetector:
                 self.det_engine.reset()
                 self.pose_engine.reset()
 
-    def __call__(self, oriImg, show_face=True, show_hands=True, show_feet=True, poses_to_detect: int = 1, **render_options):
+    def __call__(self, oriImg, show_body=True, show_face=True, show_hands=True, show_feet=True, poses_to_detect: int = 1, **render_options):
         H, W, C = oriImg.shape
         if self.model_type == "TensorRT":
             from .trt_inference import inference_detector_trt, inference_pose_trt
@@ -359,7 +360,7 @@ class DWposeDetector:
             if new_keypoints_info.shape[1] > max(max_target_idx, max_source_idx):
                  new_keypoints_info[:, openpose_idx] = new_keypoints_info[:, mmpose_idx]
             else:
-                 print(f"[DWPoseDetector][{fg('yellow')}WARNING{attr('reset')}] Keypoint remapping indices out of bounds. Skipping remapping.")
+                 logger.warning(f"Keypoint remapping indices out of bounds. Skipping remapping")
             keypoints_info = new_keypoints_info
             keypoints, scores = keypoints_info[..., :2], keypoints_info[..., 2]
 
@@ -480,7 +481,7 @@ class DWposeDetector:
                             hand_points_above_thresh += np.sum(person_right_hand_scores > 0.1)
 
         if points_above_thresh_count == 0 and face_points_above_thresh == 0 and hand_points_above_thresh == 0:
-             print("[DWposeDetector][{fg('yellow')}WARNING{attr('reset')}] No keypoints found above confidence thresholds. Returning black canvas.")
+             logger.warning(f"No keypoints found above confidence thresholds. Returning black canvas")
              return np.zeros((H, W, 3), dtype=np.uint8), {"people": []}
 
 
@@ -492,42 +493,47 @@ class DWposeDetector:
         for person_idx in range(num_people):
             person_keypoints_data = {}
 
-            # Pose Keypoints (18 body + 6 feet keypoints)
-            pose_kpts_2d = []
-            for idx in body_indices + feet_indices:
-                x, y = all_keypoints_pixel[person_idx, idx]
-                score = all_scores[person_idx, idx]
-                pose_kpts_2d.extend([float(x), float(y), float(score)])
-            person_keypoints_data["pose_keypoints_2d"] = pose_kpts_2d
+            # Pose Keypoints
+            if show_body:
+                pose_kpts_2d = []
+                indices_to_include = body_indices + (feet_indices if show_feet else [])
+                for idx in indices_to_include:
+                    x, y = all_keypoints_pixel[person_idx, idx]
+                    score = all_scores[person_idx, idx]
+                    pose_kpts_2d.extend([float(x), float(y), float(score)])
+                person_keypoints_data["pose_keypoints_2d"] = pose_kpts_2d
 
             # Face Keypoints
-            face_kpts_2d = []
-            for idx in face_indices:
-                x, y = all_keypoints_pixel[person_idx, idx]
-                score = all_scores[person_idx, idx]
-                face_kpts_2d.extend([float(x), float(y), float(score)])
-            person_keypoints_data["face_keypoints_2d"] = face_kpts_2d
+            if show_face:
+                face_kpts_2d = []
+                for idx in face_indices:
+                    x, y = all_keypoints_pixel[person_idx, idx]
+                    score = all_scores[person_idx, idx]
+                    face_kpts_2d.extend([float(x), float(y), float(score)])
+                person_keypoints_data["face_keypoints_2d"] = face_kpts_2d
 
             # Left Hand Keypoints
-            hand_left_kpts_2d = []
-            for idx in left_hand_indices:
-                x, y = all_keypoints_pixel[person_idx, idx]
-                score = all_scores[person_idx, idx]
-                hand_left_kpts_2d.extend([float(x), float(y), float(score)])
-            person_keypoints_data["hand_left_keypoints_2d"] = hand_left_kpts_2d
+            if show_hands: # show_hands already passed to draw_pose
+                hand_left_kpts_2d = []
+                for idx in left_hand_indices:
+                    x, y = all_keypoints_pixel[person_idx, idx]
+                    score = all_scores[person_idx, idx]
+                    hand_left_kpts_2d.extend([float(x), float(y), float(score)])
+                person_keypoints_data["hand_left_keypoints_2d"] = hand_left_kpts_2d
 
             # Right Hand Keypoints
-            hand_right_kpts_2d = []
-            for idx in right_hand_indices:
-                x, y = all_keypoints_pixel[person_idx, idx]
-                score = all_scores[person_idx, idx]
-                hand_right_kpts_2d.extend([float(x), float(y), float(score)])
-            person_keypoints_data["hand_right_keypoints_2d"] = hand_right_kpts_2d
+            if show_hands: # show_hands already passed to draw_pose
+                hand_right_kpts_2d = []
+                for idx in right_hand_indices:
+                    x, y = all_keypoints_pixel[person_idx, idx]
+                    score = all_scores[person_idx, idx]
+                    hand_right_kpts_2d.extend([float(x), float(y), float(score)])
+                person_keypoints_data["hand_right_keypoints_2d"] = hand_right_kpts_2d
 
             people_data.append(person_keypoints_data)
 
         keypoints_json_data = {"people": people_data}
 
-        final_canvas = draw_pose(pose, H, W, show_face=show_face, show_hands=show_hands, show_feet=show_feet, options=render_options)
+        final_canvas = draw_pose(pose, H, W, show_body=show_body, show_face=show_face, show_hands=show_hands, show_feet=show_feet, options=render_options)
 
         return final_canvas, keypoints_json_data

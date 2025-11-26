@@ -6,27 +6,28 @@ import onnxruntime as ort
 import os
 import inspect
 
-# Keep these imports relative if onnxdet/onnxpose are in the same directory
+from ..scripts import logger
 from .onnxdet import inference_detector
 from .onnxpose import inference_pose
 
 class Wholebody:
-    # Accepts provider and model paths
     def __init__(self, det_model_path: str, pose_model_path: str, provider_type: str):
 
         if not os.path.exists(det_model_path):
-            raise FileNotFoundError(f"[WholeBody][{fg('red')}ERROR{attr('reset')}] Detector model not found at: {det_model_path}")
+            logger.error(f"Detector model not found at: {det_model_path}")
+            raise FileNotFoundError(f"Detector model not found at: {det_model_path}")
         if not os.path.exists(pose_model_path):
-            raise FileNotFoundError(f"[WholeBody][{fg('red')}ERROR{attr('reset')}]Pose model not found at: {pose_model_path}")
+            logger.error(f"Pose model not found at: {pose_model_path}")
+            raise FileNotFoundError(f"Pose model not found at: {pose_model_path}")
 
         providers = ['CPUExecutionProvider'] if provider_type == 'CPU' else ['CUDAExecutionProvider', 'CPUExecutionProvider']
 
         try:
              self.session_det = ort.InferenceSession(path_or_bytes=det_model_path, providers=providers)
              self.session_pose = ort.InferenceSession(path_or_bytes=pose_model_path, providers=providers)
-             print("[WholeBody][{fg('green')}INFO{attr('reset')}] ONNX sessions created successfully.")
+             logger.info(f"ONNX sessions created successfully")
         except Exception as e:
-             print(f"[WholeBody][{fg('red')}ERROR{attr('reset')}] Failed to create ONNX session: {e}")
+             logger.error(f"Failed to create ONNX session:\n            {e}")
              raise e
 
     def __call__(self, oriImg):
@@ -59,7 +60,7 @@ class Wholebody:
         if new_keypoints_info.shape[1] > max(max_target_idx, max_source_idx):
              new_keypoints_info[:, openpose_idx] = new_keypoints_info[:, mmpose_idx]
         else:
-             print(f"[WholeBody][{fg('yellow')}WARNING{attr('reset')}] Keypoint remapping indices out of bounds. Skipping remapping.")
+             logger.warning(f"Keypoint remapping indices out of bounds. Skipping remapping")
         keypoints_info = new_keypoints_info
         keypoints_final, scores_final = keypoints_info[..., :2], keypoints_info[..., 2]
         return keypoints_final, scores_final
