@@ -29,7 +29,7 @@ Documentation = "https://github.com/hobinrude/ComfyUI_DWposeDeluxe/wiki"
 "Bug Tracker" = "https://github.com/hobinrude/ComfyUI_DWposeDeluxe/issues"
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "hobinrude"
 DisplayName = "ComfyUI_DWposeDeluxe"
 Icon = ""
 includes = [] 
