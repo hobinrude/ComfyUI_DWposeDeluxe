@@ -44,6 +44,11 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
 
 ## Installation
 
+Use **ComfyUI-Manager** and search for **DWposeDeluxe**
+(it assumes CUDA 12.X by default - see `Dependencies`)
+
+or install manually:
+
 1.  Navigate to your ComfyUI installation directory.
 
 2.  Clone this repository into the `custom_nodes` folder:
