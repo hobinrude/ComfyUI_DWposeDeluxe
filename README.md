@@ -130,6 +130,13 @@ To use without GPU support a CPU `onnxruntime` is needed. Manually change it in 
 - Converter node not fully operational yet
 
 
+## Fun fact
+
+It works even on prehistoric setups like Core 2 Duo (direct successor of 486 processors) with 4GB of DDR3 🥹
+
+![oldschool-test](https://github.com/user-attachments/assets/f9ad5bf0-4708-4fb1-8528-99d8069198e9)
+
+
 ## Acknowledgements & License
 
 This project is heavily based on the work of **yuvraj108c** and his original **[ComfyUI-Dwpose-Tensorrt](https://github.com/yuvraj108c/ComfyUI-Dwpose-Tensorrt)** repository. Big chunks of code have been repurposed straight from his project.
