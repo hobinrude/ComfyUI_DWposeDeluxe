@@ -151,5 +151,5 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "FrameNumberNode": "Frame Number Stamper"
+    "FrameNumberNode": "DWposeDeluxe Frame Numbering"
 }

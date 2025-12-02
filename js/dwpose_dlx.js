@@ -53,16 +53,14 @@ app.registerExtension({
 
             const showBodyWidget = node.widgets.find(w => w.name === "show_body");
             const showFeetWidget = node.widgets.find(w => w.name === "show_feet");
+            const showFaceWidget = node.widgets.find(w => w.name === "show_face");
+            const showHandsWidget = node.widgets.find(w => w.name === "show_hands");
 
-            const precisionWidgetOriginalIndex = node.widgets.findIndex(w => w.name === "precision");
-            const precisionWidgetReference = precisionWidget;
-
-            const showFeetWidgetOriginalIndex = node.widgets.findIndex(w => w.name === "show_feet");
-            const showFeetWidgetReference = showFeetWidget;
-
+            const bodyThresholdWidget = node.widgets.find(w => w.name === "body_threshold");
+            const faceThresholdWidget = node.widgets.find(w => w.name === "face_threshold");
+            const handThresholdWidget = node.widgets.find(w => w.name === "hand_threshold");
 
             const updateModelLists = async () => {
-
                 const detectorModelWidget = node.widgets.find(w => w.name === "detector_model");
                 const estimatorModelWidget = node.widgets.find(w => w.name === "estimator_model");
 
@@ -74,11 +72,10 @@ app.registerExtension({
                     url += `&precision=${precision}`;
                 }
 
-                                try {
-                                    const response = await fetch(url);
-                                    const data = await response.json();
-                                    console.log("updateModelLists: API response data", data);
-
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
                     if (detectorModelWidget) {
                         const currentDetectorValue = detectorModelWidget.value;
                         detectorModelWidget.options.values = data.detector_models;
@@ -120,17 +117,18 @@ app.registerExtension({
             
             linkWidgetVisibility(node, providerWidget, precisionWidget, (val) => val === "GPU");
             linkWidgetVisibility(node, showBodyWidget, showFeetWidget);
+            linkWidgetVisibility(node, showBodyWidget, bodyThresholdWidget);
+            linkWidgetVisibility(node, showFaceWidget, faceThresholdWidget);
+            linkWidgetVisibility(node, showHandsWidget, handThresholdWidget);
             
             setTimeout(() => {
                 updateModelLists();
             }, 1);
 
             node.onExecuted = async function(message) {
-                console.log("[DWposeNode] onExecuted triggered. Message:", message);
                 let refreshNeeded = false;
                 if (Array.isArray(message?.ui)) {
                     for (const ui_item of message.ui) {
-                        console.log("[DWposeNode] ui_item being processed:", ui_item);
                         if (ui_item === "model_refresh_needed") {
                             refreshNeeded = true;
                             break;
@@ -139,28 +137,14 @@ app.registerExtension({
                 }
 
                 if (refreshNeeded) {
-                    console.log("[DWposeNode] Model refresh needed signal received. Updating model lists...");
                     const originalProviderValue = providerWidget.value;
                     providerWidget.value = (originalProviderValue === "CPU") ? "GPU" : "CPU";
                     providerWidget.callback(providerWidget.value);
                     providerWidget.value = originalProviderValue;
                     providerWidget.callback(originalProviderValue);
                     await updateModelLists();
-                } else {
-                    console.log("[DWposeNode] Model refresh not needed or signal not found in message.ui.");
                 }
             };
-        } else if (node.comfyClass === "KeypointConverter") {
-            const customCanvasSizeWidget = node.widgets.find(w => w.name === "custom_canvas_size");
-            const canvasWidthWidget = node.widgets.find(w => w.name === "canvas_width");
-            const canvasHeightWidget = node.widgets.find(w => w.name === "canvas_height");
-
-            if (customCanvasSizeWidget && canvasWidthWidget) {
-                linkWidgetVisibility(node, customCanvasSizeWidget, canvasWidthWidget);
-            }
-            if (customCanvasSizeWidget && canvasHeightWidget) {
-                linkWidgetVisibility(node, customCanvasSizeWidget, canvasHeightWidget);
-            }
         }
     }
 });

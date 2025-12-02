@@ -49,8 +49,8 @@ except ImportError as e:
 
 
 class DWposeDeluxeNode:
-    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "AUDIO", "FLOAT", "POSE_KEYPOINT",)
-    RETURN_NAMES = ("pose_image", "blend_image", "source_image", "audio", "frame_rate", "keypoints",)
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE", "AUDIO", "FLOAT", "POSE_KEYPOINT",)
+    RETURN_NAMES = ("pose_image", "blend_image", "face_image", "source_image", "audio", "frame_rate", "keypoints",)
     FUNCTION = "execute"
     CATEGORY = "DWposeDeluxe"
 
@@ -96,10 +96,14 @@ class DWposeDeluxeNode:
 
         ui_inputs = {
             "poses_to_detect": ("INT", {"default": 1, "min": -1, "max": 100, "step": 1}),
+            "pose_threshold": ("FLOAT", {"default": 0.25, "min": 0.0, "max": 1.0, "step": 0.01}),
             "show_body": ("BOOLEAN", {"default": True}),
             "show_feet": ("BOOLEAN", {"default": True}),
+            "body_threshold": ("FLOAT", {"default": 0.30, "min": 0.0, "max": 1.0, "step": 0.01}),
             "show_face": ("BOOLEAN", {"default": True}),
+            "face_threshold": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
             "show_hands": ("BOOLEAN", {"default": True}),
+            "hand_threshold": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
             "provider_type": (["CPU", "GPU"], {"default": "CPU"}),
             "precision": (["fp16", "fp32"], {"default": "fp32"}),
             "detector_model": (sorted(list(all_detector_models)), ),
@@ -220,6 +224,7 @@ class DWposeDeluxeNode:
                       detector_model: str = "None", estimator_model: str = "None",
                       show_body: bool = True, show_face: bool = True, show_hands: bool = True, show_feet: bool = True, save_keypoints: bool = False,
                       poses_to_detect: int = 1,
+                      pose_threshold: float = 0.25, body_threshold: float = 0.30, face_threshold: float = 0.10, hand_threshold: float = 0.10,
                       weight_options: dict = None, **kwargs):
 
         fps_to_output = float('nan')
@@ -238,7 +243,7 @@ class DWposeDeluxeNode:
                 loaded_fps = video_info_data.get("loaded_fps")
                 if loaded_fps is not None:
                     fps_to_output = loaded_fps
-        logger.info(f"Using FPS for output: {fps_to_output}")
+        logger.info(f"Using {fps_to_output} FPS for output")
 
         actual_options = {}
         default_options = {
@@ -286,6 +291,8 @@ class DWposeDeluxeNode:
             height, width = image.shape[1], image.shape[2]
             logger.info(f"Processing {batch_size} frames of size {width}x{height} using TensorRT ({precision})")
             pbar = ProgressBar(batch_size)
+            sys.stdout.write(f'\r0% {"░" * 50} 100% | Processing frame 0/{batch_size} ')
+            sys.stdout.flush()
             start_time = time.time()
             results_list = []
             all_keypoints_data = []
@@ -303,6 +310,10 @@ class DWposeDeluxeNode:
                         show_hands=show_hands,
                         show_feet=show_feet,
                         poses_to_detect=poses_to_detect,
+                        pose_threshold=pose_threshold,
+                        body_threshold=body_threshold,
+                        face_threshold=face_threshold,
+                        hand_threshold=hand_threshold,
                         **actual_options
                     )
 
@@ -329,7 +340,6 @@ class DWposeDeluxeNode:
                 bar = '█' * int(50 * progress) + '░' * (50 - int(50 * progress))
                 percentage = int(progress * 100)
 
-                # --- Calculate in-flight FPS ---
                 elapsed_time = time.time() - start_time
                 if elapsed_time > 0.001:
                     current_fps = (i + 1) / elapsed_time
@@ -337,9 +347,111 @@ class DWposeDeluxeNode:
                 else:
                     fps_text = ""
 
-                sys.stdout.write(f'\r{percentage}% {bar} 100% | Processing frame {i + 1}/{batch_size}{fps_text}')
+                sys.stdout.write(f'\r{percentage}% {bar} 100% | Processing frame {i + 1}/{batch_size}{fps_text} ')
                 sys.stdout.flush()
+                time.sleep(0.001)
             dwpose_detector.reset_engines()
+
+            def round_to_nearest_multiple(n, m=8):
+                return int(round(n / m) * m)
+
+            master_size = 0
+            face_details = [] # This will hold all face details after per-frame sorting
+
+            if show_face:
+                all_frame_face_details = [[] for _ in range(batch_size)] # Temporarily store details per frame
+
+                for i, keypoints_data in enumerate(all_keypoints_data):
+                    current_frame_faces = []
+                    if 'people' in keypoints_data:
+                        for person in keypoints_data['people']:
+                            if 'face_box' in person:
+                                x_min, y_min, x_max, y_max = person['face_box']
+                                w, h = x_max - x_min, y_max - y_min
+                                
+                                padded_w = w * 1.1
+                                padded_h = h * 1.1
+                                square_dim = max(padded_w, padded_h)
+                                current_frame_faces.append({'frame_idx': i, 'face_box': person['face_box'], 'square_dim': square_dim})
+                    
+                    # Sort faces within the current frame by their x_min coordinate (left-to-right)
+                    current_frame_faces.sort(key=lambda x: x['face_box'][0])
+                    all_frame_face_details[i] = current_frame_faces
+                
+                # Consolidate all face details into a single list for master size calculation
+                face_details = [item for sublist in all_frame_face_details for item in sublist]
+                
+                if face_details:
+                    biggest_square_dim = max(f['square_dim'] for f in face_details)
+                    master_size = round_to_nearest_multiple(biggest_square_dim)
+
+
+            logger.info(f"Face crop size: {master_size}x{master_size}")
+
+            face_atlas_frames = []
+            if show_face and master_size > 0:
+                faces_by_frame = {}
+                for detail in face_details:
+                    idx = detail['frame_idx']
+                    if idx not in faces_by_frame:
+                        faces_by_frame[idx] = []
+                    faces_by_frame[idx].append(detail)
+
+                for i in range(batch_size):
+                    original_img_np = (image[i].cpu().numpy() * 255).astype(np.uint8)
+                    if original_img_np.shape[2] == 4: original_img_np = original_img_np[:, :, :3]
+                    elif original_img_np.shape[2] == 1: original_img_np = np.repeat(original_img_np, 3, axis=2)
+                    
+                    frame_final_crops = []
+
+                    if i in faces_by_frame:
+                        for detail in faces_by_frame[i]:
+                            x_min, y_min, x_max, y_max = detail['face_box']
+                            cx = (x_min + x_max) / 2
+                            cy = (y_min + y_max) / 2
+                            square_dim = detail['square_dim']
+
+                            src_x1 = int(cx - square_dim / 2)
+                            src_y1 = int(cy - square_dim / 2)
+                            src_x2 = int(cx + square_dim / 2)
+                            src_y2 = int(cy + square_dim / 2)
+
+                            src_x1_clip = max(0, src_x1)
+                            src_y1_clip = max(0, src_y1)
+                            src_x2_clip = min(width, src_x2)
+                            src_y2_clip = min(height, src_y2)
+
+                            source_crop = original_img_np[src_y1_clip:src_y2_clip, src_x1_clip:src_x2_clip]
+
+                            if source_crop.size > 0:
+                                scaled_crop = cv2.resize(source_crop, (master_size, master_size), interpolation=cv2.INTER_AREA)
+                                frame_final_crops.append(scaled_crop)
+
+                    if not frame_final_crops:
+                        atlas_image = np.zeros((master_size, master_size, 3), dtype=np.uint8)
+                    else:
+                        atlas_image = cv2.hconcat(frame_final_crops)
+                    
+                    face_atlas_frames.append(atlas_image)
+
+            face_atlas_tensor = torch.empty((0, 1, 1, 3), dtype=torch.float32)
+            if face_atlas_frames:
+                max_atlas_width = max(f.shape[1] for f in face_atlas_frames if f.ndim == 3 and f.shape[1] > 0)
+                
+                padded_atlas_frames = []
+                for frame in face_atlas_frames:
+                    if frame.ndim != 3 or frame.shape[1] == 0: continue
+                    h, w, _ = frame.shape
+                    if w < max_atlas_width:
+                        pad_width = max_atlas_width - w
+                        padded_frame = np.zeros((h, max_atlas_width, 3), dtype=np.uint8)
+                        padded_frame[:, :w, :] = frame
+                        padded_atlas_frames.append(padded_frame)
+                    else:
+                        padded_atlas_frames.append(frame)
+
+                if padded_atlas_frames:
+                    face_atlas_tensor = torch.from_numpy(np.array(padded_atlas_frames).astype(np.float32) / 255.0)
             
             if not results_list:
                 return (torch.empty((0, height, width, 3), dtype=torch.float32),)
@@ -400,7 +512,7 @@ class DWposeDeluxeNode:
             if built_new_model:
                 ui_output = {"ui": {"model_refresh_needed": True}}
             logger.info(f"Built new model: {built_new_model}")
-            return {"ui": ui_output, "result": (pose_output_tensor, blended_output_tensor, source_output_tensor, audio, fps_to_output, all_keypoints_data,)}
+            return {"ui": ui_output, "result": (pose_output_tensor, blended_output_tensor, face_atlas_tensor, source_output_tensor, audio, fps_to_output, all_keypoints_data,)}
             
         if not backend_available:
              logger.error(f"Backend logic could not be imported during startup")
@@ -453,6 +565,8 @@ class DWposeDeluxeNode:
         logger.info(f"Processing {batch_size} frames of size {width}x{height}")
         
         pbar = ProgressBar(batch_size)
+        sys.stdout.write(f'\r0% {"░" * 50} 100% | Processing frame 0/{batch_size} ')
+        sys.stdout.flush()
         start_time = time.time()
         results_list = []
 
@@ -470,6 +584,10 @@ class DWposeDeluxeNode:
                      show_hands=show_hands,
                      show_feet=show_feet,
                      poses_to_detect=poses_to_detect,
+                     pose_threshold=pose_threshold,
+                     body_threshold=body_threshold,
+                     face_threshold=face_threshold,
+                     hand_threshold=hand_threshold,
                      **actual_options
                  )
 
@@ -505,12 +623,115 @@ class DWposeDeluxeNode:
                 fps_text = f" @ {current_fps:.2f} FPS"
             else:
                 fps_text = ""
-            sys.stdout.write(f'\r{percentage}% {bar} 100% | Processing frame {i + 1}/{batch_size}{fps_text}')
+            sys.stdout.write(f'\r{percentage}% {bar} 100% | Processing frame {i + 1}/{batch_size}{fps_text} ')
             sys.stdout.flush()
+            time.sleep(0.001)
+
+        def round_to_nearest_multiple(n, m=8):
+            return int(round(n / m) * m)
+
+        master_size = 0
+        face_details = [] # This will hold all face details after per-frame sorting
+
+        if show_face:
+            all_frame_face_details = [[] for _ in range(batch_size)] # Temporarily store details per frame
+
+            for i, keypoints_data in enumerate(all_keypoints_data):
+                current_frame_faces = []
+                if 'people' in keypoints_data:
+                    for person in keypoints_data['people']:
+                        if 'face_box' in person:
+                            x_min, y_min, x_max, y_max = person['face_box']
+                            w, h = x_max - x_min, y_max - y_min
+                            
+                            padded_w = w * 1.1
+                            padded_h = h * 1.1
+                            square_dim = max(padded_w, padded_h)
+                            current_frame_faces.append({'frame_idx': i, 'face_box': person['face_box'], 'square_dim': square_dim})
+                
+                # Sort faces within the current frame by their x_min coordinate (left-to-right)
+                current_frame_faces.sort(key=lambda x: x['face_box'][0])
+                all_frame_face_details[i] = current_frame_faces
+            
+            # Consolidate all face details into a single list for master size calculation
+            face_details = [item for sublist in all_frame_face_details for item in sublist]
+            
+            if face_details:
+                biggest_square_dim = max(f['square_dim'] for f in face_details)
+                master_size = round_to_nearest_multiple(biggest_square_dim)
+
+
+        logger.info(f"Face crop size: {master_size}x{master_size}")
+
+        face_atlas_frames = []
+        if show_face and master_size > 0:
+            faces_by_frame = {}
+            for detail in face_details:
+                idx = detail['frame_idx']
+                if idx not in faces_by_frame:
+                    faces_by_frame[idx] = []
+                faces_by_frame[idx].append(detail)
+
+            for i in range(batch_size):
+                original_img_np = (image[i].cpu().numpy() * 255).astype(np.uint8)
+                if original_img_np.shape[2] == 4: original_img_np = original_img_np[:, :, :3]
+                elif original_img_np.shape[2] == 1: original_img_np = np.repeat(original_img_np, 3, axis=2)
+                
+                frame_final_crops = []
+
+                if i in faces_by_frame:
+                    for detail in faces_by_frame[i]:
+                        x_min, y_min, x_max, y_max = detail['face_box']
+                        cx = (x_min + x_max) / 2
+                        cy = (y_min + y_max) / 2
+                        square_dim = detail['square_dim']
+
+                        src_x1 = int(cx - square_dim / 2)
+                        src_y1 = int(cy - square_dim / 2)
+                        src_x2 = int(cx + square_dim / 2)
+                        src_y2 = int(cy + square_dim / 2)
+
+                        src_x1_clip = max(0, src_x1)
+                        src_y1_clip = max(0, src_y1)
+                        src_x2_clip = min(width, src_x2)
+                        src_y2_clip = min(height, src_y2)
+
+                        source_crop = original_img_np[src_y1_clip:src_y2_clip, src_x1_clip:src_x2_clip]
+
+                        if source_crop.size > 0:
+                            scaled_crop = cv2.resize(source_crop, (master_size, master_size), interpolation=cv2.INTER_AREA)
+                            frame_final_crops.append(scaled_crop)
+
+                if not frame_final_crops:
+                    atlas_image = np.zeros((master_size, master_size, 3), dtype=np.uint8)
+                else:
+                    atlas_image = cv2.hconcat(frame_final_crops)
+                
+                face_atlas_frames.append(atlas_image)
+        
+        face_atlas_tensor = torch.empty((0, 1, 1, 3), dtype=torch.float32)
+        if face_atlas_frames:
+            max_atlas_width = max(f.shape[1] for f in face_atlas_frames if f.ndim == 3 and f.shape[1] > 0)
+            
+            padded_atlas_frames = []
+            for frame in face_atlas_frames:
+                if frame.ndim != 3 or frame.shape[1] == 0: continue
+                h, w, _ = frame.shape
+                if w < max_atlas_width:
+                    pad_width = max_atlas_width - w
+                    padded_frame = np.zeros((h, max_atlas_width, 3), dtype=np.uint8)
+                    padded_frame[:, :w, :] = frame
+                    padded_atlas_frames.append(padded_frame)
+                else:
+                    padded_atlas_frames.append(frame)
+
+            if padded_atlas_frames:
+                face_atlas_tensor = torch.from_numpy(np.array(padded_atlas_frames).astype(np.float32) / 255.0)
 
         if not results_list:
             empty_image_tensor = torch.empty((0, height, width, 3), dtype=torch.float32)
-            return {"result": (empty_image_tensor, empty_image_tensor, empty_image_tensor, audio, fps_to_output, all_keypoints_data,)}
+            return {"result": (empty_image_tensor, empty_image_tensor, face_atlas_tensor, empty_image_tensor, audio, fps_to_output, all_keypoints_data,)}
+
 
         validated_frames = []
         for frame in results_list:
@@ -564,7 +785,7 @@ class DWposeDeluxeNode:
                 f.write(keypoints_json_string)
         sys.stdout.write('\n')
         ui_output = {}
-        return {"ui": ui_output, "result": (pose_output_tensor, blended_output_tensor, source_output_tensor, audio, fps_to_output, all_keypoints_data,)}
+        return {"ui": ui_output, "result": (pose_output_tensor, blended_output_tensor, face_atlas_tensor, source_output_tensor, audio, fps_to_output, all_keypoints_data,)}
 
 
 NODE_CLASS_MAPPINGS = {

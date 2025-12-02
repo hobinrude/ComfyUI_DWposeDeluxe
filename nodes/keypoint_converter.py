@@ -3,45 +3,52 @@ import os
 import folder_paths
 import copy
 
-def detect_format(data):
+def detect_coordinate_format(data):
+    # Simple detection: check if any coordinate value is significantly greater than 1.0.
+    # We check a few keypoints to be reasonably sure.
     for item in data:
         for person in item.get("people", []):
+            # Check a few keypoints from the main body pose
             pts = person.get("pose_keypoints_2d", [])
             if pts:
-                xs = pts[0::3][:5]
-                ys = pts[1::3][:5]
-                if any(x > 2 or y > 2 for x, y in zip(xs, ys)):
-                    return "absolute"
-                else:
-                    return "normalized"
-    return "unknown"
+                # Check up to the first 5 keypoints
+                for i in range(0, min(len(pts), 15), 3):
+                    # Take the absolute value to handle negated coordinates
+                    if abs(pts[i]) > 1.0 or abs(pts[i + 1]) > 1.0:
+                        return "absolute"
+    return "normalized"
 
-
-def convert_pose(data, width, height, fmt, add_canvas_size_to_output=True):
-    for item in data:
-        for person in item.get("people", []):
-            for key in [
-                "pose_keypoints_2d",
-                "face_keypoints_2d",
-                "hand_left_keypoints_2d",
-                "hand_right_keypoints_2d",
-            ]:
-                if key in person: # Only process keys that exist in the 'person' dictionary
-                    pts = person[key] # Get the existing list, which is guaranteed not to be empty
-                    for i in range(0, len(pts), 3):
-                        if fmt == "absolute":
-                            pts[i] = pts[i] / width
-                            pts[i + 1] = pts[i + 1] / height
-                            pts[i + 2] = 1.0
-                        else:
-                            pts[i] = pts[i] * width
-                            pts[i + 1] = pts[i + 1] * height
-
-                    person[key] = pts
-        if add_canvas_size_to_output:
+def convert_pose(data, width, height, current_format, target_format, add_canvas_size_to_output=True):
+    # Only perform conversion if the current format is different from the target format
+    if current_format != target_format:
+        for item in data:
+            for person in item.get("people", []):
+                for key in [
+                    "pose_keypoints_2d",
+                    "face_keypoints_2d",
+                    "hand_left_keypoints_2d",
+                    "hand_right_keypoints_2d",
+                ]:
+                    if key in person:
+                        pts = person[key]
+                        for i in range(0, len(pts), 3):
+                            if target_format == "normalized":
+                                if width > 0: pts[i] /= width
+                                if height > 0: pts[i+1] /= height
+                            else: # target_format is "absolute"
+                                pts[i] *= width
+                                pts[i+1] *= height
+                        person[key] = pts
+    
+    # Add canvas size to output if requested, regardless of conversion
+    if add_canvas_size_to_output:
+        for item in data:
             item["canvas_width"] = width
             item["canvas_height"] = height
+            
     return data
+
+
 
 def pretty_json_triplets_converter(data):
 
@@ -70,12 +77,12 @@ def pretty_json_triplets_converter(data):
                         person_parts.append(f'                \"{key}\": {json.dumps(value)}')
                 person_str = "            {\n" + ",\n".join(person_parts) + "\n            }"
                 people_list_str.append(person_str)
-            people_block = '\n        "people": [\n' + ",\n".join(people_list_str) + '\n        ]'
+            people_block = '        "people": [\n' + ",\n".join(people_list_str) + '\n        ]'
             frame_parts.append(people_block)
         other_keys = [k for k in frame.keys() if k != "people"]
         for key in other_keys:
             frame_parts.append(f'        \"{key}\": {json.dumps(frame[key])}')
-        output_frames.append("    {\n" + ",\n".join(output_frames) + "\n    }")
+        output_frames.append("    {\n" + ",\n".join(frame_parts) + "\n    }")
     return "[\n" + ",\n".join(output_frames) + "\n]"
 
 def remove_empty_keypoints(data):
@@ -98,6 +105,34 @@ def remove_empty_keypoints(data):
     return cleaned_data
 
 
+def filter_keypoints_by_confidence(data, confidence_threshold, reset_confidence=False):
+    for item in data:
+        for person in item.get("people", []):
+            for key in [
+                "pose_keypoints_2d",
+                "face_keypoints_2d",
+                "hand_left_keypoints_2d",
+                "hand_right_keypoints_2d",
+            ]:
+                if key in person:
+                    pts = person[key]
+                    for i in range(0, len(pts), 3):
+                        if reset_confidence:
+                            # Scenario 2: Binary confidence (0.0 or 1.0)
+                            if pts[i + 2] < confidence_threshold:
+                                pts[i + 2] = 0.0
+                            else:
+                                pts[i + 2] = 1.0
+                            # Coordinates (pts[i], pts[i+1]) remain unchanged in this scenario
+                        else:
+                            # Scenario 1: Negate coordinates, keep original confidence
+                            if pts[i + 2] < confidence_threshold:
+                                pts[i] *= -1
+                                pts[i + 1] *= -1
+                                # pts[i+2] (confidence) remains unchanged
+    return data
+
+
 class KeypointConverter:
     RETURN_TYPES = ("POSE_KEYPOINT",)
     RETURN_NAMES = ("pose_keypoints",)
@@ -108,56 +143,107 @@ class KeypointConverter:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "custom_canvas_size": ("BOOLEAN", {"default": False}),
                 "pose_keypoints": ("POSE_KEYPOINT",),
-                "canvas_width": ("INT", {"default": 768, "min": 1, "max": 4096, "step": 1}),
-                "canvas_height": ("INT", {"default": 768, "min": 1, "max": 4096, "step": 1}),
-                "human_friendly_json": ("BOOLEAN", {"default": True}),
+                "padding_mode": (["auto-padding", "no-padding"],),
+                "confidence_threshold": ("FLOAT", {"default": 0.25, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "reset_confidence": ("BOOLEAN", {"default": False}),
+                "force_normalized": ("BOOLEAN", {"default": False}),
+                "pretty_json": ("BOOLEAN", {"default": False}),
                 "save_output": ("BOOLEAN", {"default": False}),
             }
         }
 
-    def execute(self, custom_canvas_size: bool, pose_keypoints: str, canvas_width: int, canvas_height: int,
-                      human_friendly_json: bool, save_output: bool):
+    def execute(self, pose_keypoints: str, padding_mode: str, confidence_threshold: float,
+                      reset_confidence: bool, force_normalized: bool, pretty_json: bool, save_output: bool):
         
         if isinstance(pose_keypoints, str):
             data = json.loads(pose_keypoints)
         else:
             data = copy.deepcopy(pose_keypoints)
 
+        # Filter keypoints by confidence threshold
+        data = filter_keypoints_by_confidence(data, confidence_threshold, reset_confidence)
+
         # Remove any key-value pairs where the value is an empty list.
         data = remove_empty_keypoints(data)
 
         final_width = None
         final_height = None
-        add_canvas_size_to_output = custom_canvas_size
+        add_canvas_size_to_output = False # Will be True if we determine canvas size here
 
-        if custom_canvas_size:
-            final_width = canvas_width
-            final_height = canvas_height
-        else:
-            if data and isinstance(data, list) and len(data) > 0:
-                first_frame = data[0]
-                keypoints_width = first_frame.get("canvas_width")
-                keypoints_height = first_frame.get("canvas_height")
+        # Try to get canvas size from the input data first
+        if data and isinstance(data, list) and len(data) > 0:
+            first_frame = data[0]
+            keypoints_width = first_frame.get("canvas_width")
+            keypoints_height = first_frame.get("canvas_height")
 
-                if keypoints_width is not None and keypoints_height is not None:
-                    final_width = keypoints_width
-                    final_height = keypoints_height
+            if keypoints_width is not None and keypoints_height is not None:
+                final_width = keypoints_width
+                final_height = keypoints_height
+        
+        # --- Padding Logic ---
+        # First, find the bounding box of all keypoints, as we might need it for either padding mode.
+        min_x, min_y = float('inf'), float('inf')
+        max_x, max_y = float('-inf'), float('-inf')
+        has_keypoints = False
 
+        for item in data:
+            for person in item.get("people", []):
+                for key in ["pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
+                    if key in person:
+                        pts = person[key]
+                        if pts: has_keypoints = True
+                        for i in range(0, len(pts), 3):
+                            x, y = pts[i], pts[i+1]
+                            min_x = min(min_x, x)
+                            min_y = min(min_y, y)
+                            max_x = max(max_x, x)
+                            max_y = max(max_y, y)
+
+        if not has_keypoints and (final_width is None or final_height is None):
+            raise Exception("[KeypointConverter] ERROR: No keypoints found to determine canvas dimensions.")
+
+        # Case 1: 'no-padding' is selected. ALWAYS crop to the bounding box.
+        if padding_mode == "no-padding" and has_keypoints:
+            final_width = max_x - min_x
+            final_height = max_y - min_y
+            # Offset all keypoints
+            for item in data:
+                for person in item.get("people", []):
+                    for key in ["pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
+                        if key in person:
+                            pts = person[key]
+                            for i in range(0, len(pts), 3):
+                                pts[i] -= min_x
+                                pts[i+1] -= min_y
+            add_canvas_size_to_output = True
+        
+        # Case 2: 'auto-padding' is selected AND canvas size is missing.
+        elif padding_mode == "auto-padding" and (final_width is None or final_height is None) and has_keypoints:
+            final_width = max_x + min_x
+            final_height = max_y + min_y
+            add_canvas_size_to_output = True
+
+        # Round up to nearest multiple of 8 if dimensions were calculated
+        if add_canvas_size_to_output:
+            if final_width is not None:
+                final_width = int(((final_width + 7) // 8) * 8)
+            if final_height is not None:
+                final_height = int(((final_height + 7) // 8) * 8)
+            
         if final_width is None or final_height is None:
-            raise Exception("[KeypointConverter] ERROR: Canvas dimensions could not be determined. "
-                          "Enable 'custom_canvas_size' or ensure the input keypoints contain 'canvas_width' and 'canvas_height'.")
+            raise Exception("[KeypointConverter] ERROR: Canvas dimensions could not be determined "
+                            "even after applying padding mode. This should not happen.")
 
-        current_format = detect_format(data)
-        if current_format == "unknown":
-            converted_data = data
-            output_format = "unknown"
-        else:
-            converted_data = convert_pose(data, final_width, final_height, current_format, add_canvas_size_to_output)
-            output_format = "relative" if current_format == "absolute" else "absolute"
+        # Detect the format of the incoming data
+        current_format = detect_coordinate_format(data)
+        # Determine the desired output format from the toggle
+        output_format = "normalized" if force_normalized else "absolute"
+        
+        # Convert the pose data only if the format needs to be changed
+        converted_data = convert_pose(data, final_width, final_height, current_format, output_format, add_canvas_size_to_output)
 
-        if human_friendly_json:
+        if pretty_json:
             converted_json_string = pretty_json_triplets_converter(converted_data)
         else:
             converted_json_string = json.dumps(converted_data, separators=(",", ":"))
@@ -175,7 +261,7 @@ class KeypointConverter:
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(converted_json_string)
 
-        if human_friendly_json:
+        if pretty_json:
             return (converted_json_string,)
         else:
             return (converted_data,)

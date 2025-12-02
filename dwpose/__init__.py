@@ -334,7 +334,7 @@ class DWposeDetector:
                 self.det_engine.reset()
                 self.pose_engine.reset()
 
-    def __call__(self, oriImg, show_body=True, show_face=True, show_hands=True, show_feet=True, poses_to_detect: int = 1, **render_options):
+    def __call__(self, oriImg, show_body=True, show_face=True, show_hands=True, show_feet=True, poses_to_detect: int = 1, pose_threshold: float = 0.25, body_threshold: float = 0.3, face_threshold: float = 0.1, hand_threshold: float = 0.1, **render_options):
         H, W, C = oriImg.shape
         if self.model_type == "TensorRT":
             from .trt_inference import inference_detector_trt, inference_pose_trt
@@ -350,7 +350,7 @@ class DWposeDetector:
             keypoints_info = np.concatenate(
                 (keypoints, scores[..., None]), axis=-1)
             neck = np.mean(keypoints_info[:, [5, 6]], axis=1)
-            neck_valid = np.logical_and(keypoints_info[:, 5, 2] > 0.3, keypoints_info[:, 6, 2] > 0.3)
+            neck_valid = np.logical_and(keypoints_info[:, 5, 2] > body_threshold, keypoints_info[:, 6, 2] > body_threshold)
             neck[:, 2] = neck_valid.astype(float)
             new_keypoints_info = np.insert(keypoints_info, 17, neck, axis=1)
             mmpose_idx = [17, 6, 8, 10, 7, 9, 12, 14, 16, 13, 15, 2, 1, 4, 3]
@@ -377,9 +377,9 @@ class DWposeDetector:
             for i in range(num_people):
                 person_kpts = keypoints[i, :, :2]
                 
-                # Filter out keypoints with low confidence (score < 0.25)
+                # Filter out keypoints with low confidence (score < pose_threshold)
                 person_scores = scores[i, :]
-                confident_kpts = person_kpts[person_scores > 0.25]
+                confident_kpts = person_kpts[person_scores > pose_threshold]
 
                 if confident_kpts.shape[0] > 0:
 
@@ -423,7 +423,6 @@ class DWposeDetector:
         num_body_points = len(body_subset_indices)
 
         start_idx = 0
-        confidence_threshold = 0.3
         points_above_thresh_count = 0
 
         for person_idx in range(num_people):
@@ -437,7 +436,7 @@ class DWposeDetector:
              subset_row = np.full(num_body_points, -1, dtype=int)
              person_points_above_thresh = 0
              for i, point_idx in enumerate(body_subset_indices):
-                 if point_idx < len(person_scores) and person_scores[point_idx] > confidence_threshold:
+                 if point_idx < len(person_scores) and person_scores[point_idx] > body_threshold:
                      subset_row[i] = start_idx + i; person_points_above_thresh += 1
              subset_list.append(subset_row)
              start_idx += num_body_points; points_above_thresh_count += person_points_above_thresh
@@ -452,8 +451,8 @@ class DWposeDetector:
              for i in range(num_people):
                   if max_face_idx < all_keypoints_norm.shape[1]:
                        person_face_scores = all_scores[i, face_indices]
-                       if np.any(person_face_scores > 0.1):
-                            faces_list.append(all_keypoints_norm[i, face_indices]); face_points_above_thresh += np.sum(person_face_scores > 0.1)
+                       if np.any(person_face_scores > face_threshold):
+                            faces_list.append(all_keypoints_norm[i, face_indices]); face_points_above_thresh += np.sum(person_face_scores > face_threshold)
 
         hands_list = []
         hand_points_above_thresh = 0
@@ -465,9 +464,9 @@ class DWposeDetector:
                  if max_left_hand_idx < all_keypoints_norm.shape[1]:
                       person_left_hand_scores = all_scores[i, left_hand_indices]
 
-                      if np.any(person_left_hand_scores > 0.1):
+                      if np.any(person_left_hand_scores > hand_threshold):
                            hands_list.append(all_keypoints_norm[i, left_hand_indices])
-                           hand_points_above_thresh += np.sum(person_left_hand_scores > 0.1)
+                           hand_points_above_thresh += np.sum(person_left_hand_scores > hand_threshold)
 
         # Check right hand
         if len(right_hand_indices) > 0:
@@ -476,9 +475,9 @@ class DWposeDetector:
                   if max_right_hand_idx < all_keypoints_norm.shape[1]:
                        person_right_hand_scores = all_scores[i, right_hand_indices]
 
-                       if np.any(person_right_hand_scores > 0.1):
+                       if np.any(person_right_hand_scores > hand_threshold):
                             hands_list.append(all_keypoints_norm[i, right_hand_indices])
-                            hand_points_above_thresh += np.sum(person_right_hand_scores > 0.1)
+                            hand_points_above_thresh += np.sum(person_right_hand_scores > hand_threshold)
 
         if points_above_thresh_count == 0 and face_points_above_thresh == 0 and hand_points_above_thresh == 0:
              logger.warning(f"No keypoints found above confidence thresholds. Returning black canvas")
@@ -506,11 +505,20 @@ class DWposeDetector:
             # Face Keypoints
             if show_face:
                 face_kpts_2d = []
+                face_kpts_for_bbox = []
                 for idx in face_indices:
                     x, y = all_keypoints_pixel[person_idx, idx]
                     score = all_scores[person_idx, idx]
                     face_kpts_2d.extend([float(x), float(y), float(score)])
+                    if score > face_threshold:
+                        face_kpts_for_bbox.append((x, y))
+
                 person_keypoints_data["face_keypoints_2d"] = face_kpts_2d
+                if face_kpts_for_bbox:
+                    x_coords, y_coords = zip(*face_kpts_for_bbox)
+                    x_min, x_max = min(x_coords), max(x_coords)
+                    y_min, y_max = min(y_coords), max(y_coords)
+                    person_keypoints_data["face_box"] = [float(x_min), float(y_min), float(x_max), float(y_max)]
 
             # Left Hand Keypoints
             if show_hands: # show_hands already passed to draw_pose

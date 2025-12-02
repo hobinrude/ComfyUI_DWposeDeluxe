@@ -208,4 +208,16 @@ async def get_model_list_api_route(request):
         logger.error(f"Failed to get model list\n            {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+@PromptServer.instance.routes.get('/dwpose_adv/get_files')
+async def get_files_for_input_dir_route(request):
+    try:
+        input_dir = folder_paths.get_input_directory()
+        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and f.lower().endswith('.json')]
+        if not files:
+            files = ["[none]"]
+        return web.json_response(sorted(files))
+    except Exception as e:
+        logger.error(f"Failed to get files for input directory: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 print("\n-------------------------- DWposeDeluxe nodes loaded -----------------------------")
