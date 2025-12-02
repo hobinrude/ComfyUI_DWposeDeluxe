@@ -3,7 +3,7 @@
 
 **Pre-release sneak-peek**
 
-A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole-Body Pose Estimation) model for high-quality pose detection. This node supports both CPU (ONNX) and high-performance GPU (TensorRT) execution, with automatic model downloading and engine building. Runs on average 20x faster than pose estimators without TensorRT engine booster. Added functionality for drawing feet, composite image with optional frame count for pose debugging, json dataset output and json converter node.
+A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole-Body Pose Estimation) model for high-quality pose detection. This node supports both CPU (ONNX) and high-performance GPU (TensorRT) execution, with automatic model downloading and engine building. Runs on average 20x faster than pose estimators without TensorRT engine booster. Added functionality for drawing feet, composite image with optional frame count for pose debugging, json dataset output and json converter node which can convert pixel-absolute coordinates to canvas-relative format.
 
 ![example](https://github.com/user-attachments/assets/c31ebb40-4bee-4922-b8b8-4e5333773d9a)
 
@@ -20,10 +20,12 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
     - `DWposeDeluxeNode`: The core node for performing pose estimation.
     - `DWposeDeluxe Weight Options`: Fine-tune the visual style of the rendered pose skeleton, such as dot size and line thickness.
     - `DWposeDeluxe Keypoint Converter`: A utility node to convert keypoint data between absolute (pixel) and normalized (percentage) coordinates.
+    - `DWposeDeluxe Frame Numbering`: Prints frame numbers onto any video. Lets you set custom font, size and pick corner at wish.
 
 - **Rich I/O**:
     - **`pose_image`**: The generated pose skeleton on a black background.
     - **`blend_image`**: A 50/50 blend of the source image and the pose image.
+    - **`face_image`**: Face crop of source image (multipose)
     - **`source_image`**: A passthrough of the original input image.
     - **`audio`**: A passthrough for the audio channel from video inputs.
     - **`frame_rate`**: The frame rate derived from the `video_info` input.
@@ -31,10 +33,13 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
 
 - **Advanced Customization**:
     - Toggle visibility for face, hands, and feet in the final pose.
+    - Set confidence threshold per individual subset.
+    - Adjust size and thickness of pose elements.
     - Save generated keypoint data directly to your ComfyUI output directory.
+    - Optional pretty JSON output (human-readible).
     - Add a frame number overlay to batch outputs, helpful by pose debugging.
 
-- **Video Workflow Ready**: Includes `audio` and `video_info` input, `frame_count` and `frame_rate` outputs, `source_image` and `audio` pass-through to seamlessly integrate with video load/combine nodes.
+- **Video Workflow Ready**: Includes `audio` and `video_info` input, `frame_count` and `frame_rate` outputs, `source_image` and `audio` pass-through to seamlessly integrate with video load/combine nodes. Cropped `face_image` easy face reference for models like WAN Animate (supports multiple poses).
 
 
 **Full Pose With Feet (optional)**
@@ -85,7 +90,11 @@ or install manually:
 
 5.  (Optional) Connect the `keypoints` output to the **`DWposeDeluxe Keypoint Converter`** node to transform the keypoint data if downstream nodes require different formats.
 
-6.  Set **`poses_to_detect`** to a specific number to eliminate detections of unwanted background photo-bombers. This works based on bounding box size so will only detect X biggest poses in each frame.
+6.  Set **`poses_to_detect`** to a specific number to eliminate detections of unwanted background photo-bombers. This works based on bounding box size so will only detect X biggest poses in each frame (can currently be a bit glitchy, but more stable and accurate pose tracking methods will be added soon)
+
+7. Connect `face_image` as face reference for models like WAN Animate or StableDancer. Can output multiple faces when more than one poses is detected. Use downstream crop node to get individual face.
+
+8. Some common user-side errors are suppressed with `InterruptProcessingException` so always check console output for error logs if your workflow gets quietly interrupted during pose detection.
 
 
 **Basic Example Workflow Included**
@@ -119,6 +128,11 @@ To use without GPU support a CPU `onnxruntime` is needed. Manually change it in 
 
 ## Changelog
 
+- 2025-12-02
+  - Added `face_image` crop from source by bbox
+  - Fixed normalized and pretty JSON output of Converter node
+  - Added visibility thresholds by detection confidence per keypoint in subset 
+
 - 2025-11-26
   - Major UI and inference bugfixes
   - Improved console logging
@@ -127,7 +141,10 @@ To use without GPU support a CPU `onnxruntime` is needed. Manually change it in 
 
 ## Known issues
 
-- Converter node not fully operational yet
+- Not enough stars 🤪
+
+This node pack is still under development but feel free to report any `Issues`.
+Same goes for additional feature requests, which are more than welcome in `Issues` section.
 
 
 ## Fun fact
