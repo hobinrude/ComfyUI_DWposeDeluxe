@@ -56,10 +56,6 @@ app.registerExtension({
             const showFaceWidget = node.widgets.find(w => w.name === "show_face");
             const showHandsWidget = node.widgets.find(w => w.name === "show_hands");
 
-            const bodyThresholdWidget = node.widgets.find(w => w.name === "body_threshold");
-            const faceThresholdWidget = node.widgets.find(w => w.name === "face_threshold");
-            const handThresholdWidget = node.widgets.find(w => w.name === "hand_threshold");
-
             const updateModelLists = async () => {
                 const detectorModelWidget = node.widgets.find(w => w.name === "detector_model");
                 const estimatorModelWidget = node.widgets.find(w => w.name === "estimator_model");
@@ -117,9 +113,6 @@ app.registerExtension({
             
             linkWidgetVisibility(node, providerWidget, precisionWidget, (val) => val === "GPU");
             linkWidgetVisibility(node, showBodyWidget, showFeetWidget);
-            linkWidgetVisibility(node, showBodyWidget, bodyThresholdWidget);
-            linkWidgetVisibility(node, showFaceWidget, faceThresholdWidget);
-            linkWidgetVisibility(node, showHandsWidget, handThresholdWidget);
             
             setTimeout(() => {
                 updateModelLists();

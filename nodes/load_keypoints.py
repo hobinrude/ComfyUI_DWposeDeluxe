@@ -1,6 +1,9 @@
+# ComfyUI_DWposeDeluxe/nodes/load_keypoints.py
+
 import os
 import json
 import folder_paths
+
 
 def detect_format(data):
     for item in data:
@@ -15,10 +18,12 @@ def detect_format(data):
                     return "normalized"
     return "unknown"
 
+
 def detect_structure(json_string: str) -> str:
     if ',\n' in json_string:
         return "pretty"
     return "default"
+
 
 def get_keypoint_files_from_input_dir():
     input_dir = folder_paths.get_input_directory()
@@ -42,10 +47,9 @@ class LoadPoseKeypoints:
                     "dwpose_adv.file_select_binding": True
                 }),
             },
-
         }
 
-    CATEGORY = "DWPose Advanced/IO"
+    CATEGORY = "DWposeDeluxe/IO"
 
     RETURN_TYPES = ("POSE_KEYPOINT", "STRING")
     RETURN_NAMES = ("pose_keypoints", "keypoint_info")
@@ -67,7 +71,7 @@ class LoadPoseKeypoints:
             data = json.loads(data_str)
             
             if isinstance(data, dict):
-                data = [data] # Wrap single dictionary in a list
+                data = [data]
 
             if not data:
                 return ("", "Error: JSON file is empty or malformed.")
@@ -173,6 +177,7 @@ class LoadPoseKeypoints:
 
         return (data_str if data is not None else "", keypoint_info)
 
+
     @classmethod
     def IS_CHANGED(s, file, **kwargs):
         if file == "[none]" or not file or not file.strip():
@@ -185,10 +190,6 @@ class LoadPoseKeypoints:
         except:
             return float("nan")
 
-NODE_CLASS_MAPPINGS = {
-    "LoadPoseKeypoints": LoadPoseKeypoints
-}
+NODE_CLASS_MAPPINGS = {"LoadPoseKeypoints": LoadPoseKeypoints}
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "LoadPoseKeypoints": "DWposeDeluxe Load Keypoints"
-}
+NODE_DISPLAY_NAME_MAPPINGS = {"LoadPoseKeypoints": "DWposeDeluxe Load Keypoints"}

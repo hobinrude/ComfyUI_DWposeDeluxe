@@ -1,5 +1,5 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
+import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 
 const style = document.createElement('style');
 style.textContent = `
@@ -40,11 +40,10 @@ app.registerExtension({
                 app.graph.setDirtyCanvas(true, true);
             };
 
-            // Helper function to upload files (similar to VHS.core.js)
             async function uploadFile(file, progressCallback) {
                 try {
                     const body = new FormData();
-                    body.append("image", file); // ComfyUI's API uses 'image' for file uploads, even for JSON
+                    body.append("image", file);
                     const url = api.apiURL("/upload/image");
 
                     const resp = await new Promise((resolve, reject) => {
@@ -68,10 +67,9 @@ app.registerExtension({
 
             // Add the "Upload keypoint dataset" button
             const uploadButton = node.addWidget("button", "Upload keypoint dataset", "upload", async () => {
-                // Create a hidden file input element
                 const fileInput = document.createElement("input");
                 fileInput.type = "file";
-                fileInput.accept = ".json"; // Accept only JSON files
+                fileInput.accept = ".json";
                 fileInput.style.display = "none";
                 document.body.appendChild(fileInput);
 
@@ -79,27 +77,24 @@ app.registerExtension({
                     if (fileInput.files.length > 0) {
                         try {
                             const uploadedFile = fileInput.files[0];
-                            // Show progress (optional)
-                            node.progress = 0; // Initialize progress
+                            node.progress = 0;
                             const resp = await uploadFile(uploadedFile, (p) => { node.progress = p; });
-                            node.progress = undefined; // Clear progress
+                            node.progress = undefined;
 
-                            const filename = JSON.parse(resp.responseText).name; // Get the filename from the API response
+                            const filename = JSON.parse(resp.responseText).name;
                             
-                            // Refresh the file list and select the new file
                             await updateFileList(filename);
 
                         } catch (error) {
                             console.error("Error during upload:", error);
                         }
                     }
-                    document.body.removeChild(fileInput); // Clean up the hidden input
+                    document.body.removeChild(fileInput);
                 };
 
-                // Programmatically click the hidden file input
                 fileInput.click();
             });
-            uploadButton.options.serialize = false; // Don't save this button in workflow
+            uploadButton.options.serialize = false;
 
             // Initial file list load
             setTimeout(() => {

@@ -1,3 +1,4 @@
+# ComfyUI_DWposeDeluxe/nodes/frame_number.py
 
 import torch
 import numpy as np
@@ -9,6 +10,7 @@ try:
     HAS_PILLOW = True
 except ImportError:
     HAS_PILLOW = False
+
 
 def find_font_file(font_name):
     if os.path.isfile(font_name):
@@ -50,9 +52,9 @@ class FrameNumberNode:
                 "image": ("IMAGE",),
                 "frame_numbers": ("BOOLEAN", {"default": True}),
                 "number_position": (["top-left", "top-right", "bottom-left", "bottom-right"],),
-                "font_size": ("INT", {"default": 32, "min": 1, "max": 1024, "step": 1}),
-                "font_name": ("STRING", {"default": "arial.ttf"}),
-                "overlay_opacity": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "font_size": ("INT", {"default": 64, "min": 1, "max": 1024, "step": 1}),
+                "font_name": ("STRING", {"default": "arialbd.ttf"}),
+                "overlay_opacity": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
             }
         }
 
@@ -60,14 +62,13 @@ class FrameNumberNode:
     FUNCTION = "execute"
     CATEGORY = "DWPose Advanced/Utils"
 
+
     def _add_frame_number_overlay(self, image_np, frame_number, corner_position, font_name, font_size, opacity):
         if not HAS_PILLOW:
             raise ImportError("Pillow library is required for custom font rendering. Please install it with 'pip install Pillow'")
 
-        # Convert main image to Pillow Image with alpha channel
         original_image = Image.fromarray(image_np).convert("RGBA")
 
-        # Create a transparent overlay layer
         overlay = Image.new("RGBA", original_image.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(overlay)
 
@@ -84,14 +85,12 @@ class FrameNumberNode:
 
         text = str(frame_number)
         
-        # Use anchor='lt' to make positioning calculations simpler and more accurate
         bbox = draw.textbbox((0, 0), text, font=font, anchor='lt')
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
 
         margin = int(min(original_image.height, original_image.width) / 20.0)
 
-        # Calculate position based on the text's bounding box
         if corner_position == "top-left":
             pos = (margin, margin)
         elif corner_position == "top-right":
@@ -104,17 +103,13 @@ class FrameNumberNode:
         shadow_offset = max(1, font_size // 16)
         shadow_pos = (pos[0] + shadow_offset, pos[1] + shadow_offset)
         
-        # Draw shadow and text (fully opaque) on the separate overlay layer
         draw.text(shadow_pos, text, font=font, fill=(0, 0, 0, 255), anchor='lt')
         draw.text(pos, text, font=font, fill=(255, 255, 255, 255), anchor='lt')
 
-        # Create an image with the text composited on it
         text_on_image = Image.alpha_composite(original_image, overlay)
 
-        # Blend the original image with the text-composited image to apply final opacity
         final_image = Image.blend(original_image, text_on_image, alpha=opacity)
 
-        # Convert back to a 3-channel RGB numpy array for ComfyUI
         return np.array(final_image.convert("RGB"))
 
 
@@ -146,10 +141,6 @@ class FrameNumberNode:
         
         return (output_tensor,)
 
-NODE_CLASS_MAPPINGS = {
-    "FrameNumberNode": FrameNumberNode
-}
+NODE_CLASS_MAPPINGS = {"FrameNumberNode": FrameNumberNode}
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "FrameNumberNode": "DWposeDeluxe Frame Numbering"
-}
+NODE_DISPLAY_NAME_MAPPINGS = {"FrameNumberNode": "DWposeDeluxe Frame Numbering"}

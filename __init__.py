@@ -182,7 +182,7 @@ if os.path.exists(nodes_dir):
                 if hasattr(module, "NODE_CLASS_MAPPINGS") and hasattr(module, "NODE_DISPLAY_NAME_MAPPINGS"):
                     NODE_CLASS_MAPPINGS.update(module.NODE_CLASS_MAPPINGS)
                     NODE_DISPLAY_NAME_MAPPINGS.update(module.NODE_DISPLAY_NAME_MAPPINGS)
-                    logger.info(f"  - Loaded {len(module.NODE_CLASS_MAPPINGS)} node(s) from {filename}")
+                    logger.info(f"Found {len(module.NODE_CLASS_MAPPINGS)} node definition(s) in {filename}")
                 else:
                     logger.warning(f"  - Skipping {filename}, does not contain required MAPPINGS.")
             except Exception as e:
