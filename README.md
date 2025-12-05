@@ -103,10 +103,10 @@ or install manually:
 8. Some common user-side errors are suppressed with `InterruptProcessingException` so always check console output for error logs if your workflow gets quietly interrupted during pose detection.
 
 
-
 **Basic Example Workflow Included**
 
 ![Workflow Example](pixels/workflow.png)
+
 
 ## Dependencies
 
@@ -129,9 +129,13 @@ or install manually with:
 `pip install tensorrt-cu12`
 `pip install tensorrt-cu13`
 
-To use without GPU support a CPU `onnxruntime` is needed. Manually change it in `requirements.txt`.
+To use without GPU support a CPU version of `onnxruntime` is needed instead of `onnxruntime-gpu`. Manually change it in `requirements.txt`. Also remove TensorRT as it won't be used in CPU mode.
 
 ## Changelog
+
+- 2025-12-04
+
+  - Added PosePrinter and Interpolation nodes
 
 - 2025-12-02
   
@@ -147,10 +151,11 @@ To use without GPU support a CPU `onnxruntime` is needed. Manually change it in 
 
 ## Known issues
 
+- UI is not optimized for Nodes 2.0
 - Thresholds need to be looked at
 - Not enough stars 🤪
 
-This node pack is still under development but feel free to report any `Issues`.
+This node pack is still under development, so reporting any `Issues` is much apperciated.
 Same goes for additional feature requests, which are more than welcome in `Issues` section.
 
 ## Fun fact
