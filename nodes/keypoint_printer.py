@@ -35,10 +35,12 @@ class KeypointPrinter:
             logger.warning("Keypoints data is empty or invalid. Returning empty image.")
             return (torch.zeros((1, 64, 64, 3), dtype=torch.float32),)
 
+        # Coordinate Format Check
         for frame in keypoints:
             for person in frame.get("people", []):
                 for key in ["pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
                     kpts = person.get(key, [])
+                    # Check only a few points for efficiency
                     for i in range(0, min(len(kpts), 9), 3):
                         if kpts[i] > 1.0 or kpts[i+1] > 1.0:
                             logger.error("Keypoints are in absolute (pixel) format. Please use a Keypoint Converter node to normalize them before using the printer.")
@@ -78,6 +80,7 @@ class KeypointPrinter:
             if poses_to_print != -1:
                 people_to_process = people_to_process[:poses_to_print]
 
+            # Data Transformation
             current_candidate = []
             current_subset = []
             all_hand_peaks = []
@@ -87,7 +90,7 @@ class KeypointPrinter:
             for person in people_to_process:
                 if show_body:
                     pose_kpts_2d = np.array(person.get('pose_keypoints_2d', [])).reshape(-1, 3)
-                    person_subset_row = [-1] * 25
+                    person_subset_row = [-1] * 25 # DWpose uses up to 25 keypoints for body/feet
                     
                     for kpt_idx, (x, y, conf) in enumerate(pose_kpts_2d):
                         if kpt_idx < 25 and conf > 0:
@@ -113,6 +116,7 @@ class KeypointPrinter:
                     if normalized_face_kpts:
                         all_lmks.append(normalized_face_kpts)
 
+            # Rendering
             if show_body and current_candidate and current_subset:
                 canvas_np = dwpose_util.draw_bodypose(canvas_np, np.array(current_candidate), np.array(current_subset), show_feet, actual_options)
             

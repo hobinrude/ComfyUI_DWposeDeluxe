@@ -5,6 +5,7 @@ import cv2
 import sys
 import time
 import json
+import torch
 import numpy as np
 import folder_paths
 
@@ -15,11 +16,6 @@ from . import HAS_TENSORRT
 from .scripts import logger
 from .nodes.custom_options import DWOPOSE_CUSTOM_OPTIONS_TYPE
 
-try:
-    import torch
-    IS_GPU_AVAILABLE = torch.cuda.is_available() and torch.cuda.device_count() > 0
-except:
-    IS_GPU_AVAILABLE = False
 
 if HAS_TENSORRT:
     try:
@@ -122,57 +118,42 @@ class DWposeDeluxeNode:
         }
         return inputs
 
-        @classmethod
+    @classmethod
+    def get_model_list(cls, provider_type, precision=None):
+        models_dir = os.path.join(folder_paths.models_dir, "dwpose")
 
-        def get_model_list(cls, provider_type, precision=None):
+        onnx_detector_models = [f for f in os.listdir(models_dir) if f.startswith("yolox_") and f.endswith(".onnx")]
+        onnx_estimator_models = [f for f in os.listdir(models_dir) if f.startswith("dw-ll_ucoco_") and f.endswith(".onnx")]
 
-            if provider_type == "GPU" and not IS_GPU_AVAILABLE:
-                return (["No compatible GPU detected"], ["No compatible GPU detected"])
+        detector_models = []
+        estimator_models = []
 
-            models_dir = os.path.join(folder_paths.models_dir, "dwpose")
-            onnx_detector_models_base = [f for f in os.listdir(models_dir) if f.startswith("yolox_") and f.endswith(".onnx")]
-            onnx_estimator_models_base = [f for f in os.listdir(models_dir) if f.startswith("dw-ll_ucoco_") and f.endswith(".onnx")]
-            detector_models = []
-            estimator_models = []
-
-            if provider_type == "CPU":
-                detector_models.extend(onnx_detector_models_base if onnx_detector_models_base else ["auto-download"])
-                estimator_models.extend(onnx_estimator_models_base if onnx_estimator_models_base else ["auto-download"])
-            elif provider_type == "GPU":
-                if precision == "fp32":
-                    detector_models.extend(onnx_detector_models_base)
-                    estimator_models.extend(onnx_estimator_models_base)
-                if not HAS_TENSORRT:
-                    detector_models.append("TensorRT_Not_Installed")
-                    estimator_models.append("TensorRT_Not_Installed")
-                elif precision:
-                    if HAS_TENSORRT:
-                        all_trt_files = [f for f in os.listdir(models_dir) if f.endswith(".trt")]
-                        detector_prefix = f"yolox_l_{precision}"
-                        matching_detector_models = [f for f in all_trt_files if f.startswith(detector_prefix) and f.endswith(".trt")]
-                        detector_models.extend(sorted(matching_detector_models) if matching_detector_models else ["auto-build"])
-                        estimator_prefix = f"dw-ll_ucoco_384_{precision}"
-                        matching_estimator_models = [f for f in all_trt_files if f.startswith(estimator_prefix) and f.endswith(".trt")]
-                        estimator_models.extend(sorted(matching_estimator_models) if matching_estimator_models else ["auto-build"])
-                    else:
-                        detector_models.append("TensorRT_Not_Installed")
-                        estimator_models.append("TensorRT_Not_Installed")
-                else:
-                    detector_models.append("select_precision")
-                    estimator_models.append("select_precision")
-            if not detector_models:
-                detector_models.append("auto-download")
+        if provider_type == "CPU":
+            detector_models = onnx_detector_models if onnx_detector_models else ["auto-download"]
+            estimator_models = onnx_estimator_models if onnx_estimator_models else ["auto-download"]
+        elif provider_type == "GPU":
+            if not HAS_TENSORRT:
+                detector_models = ["TensorRT_Not_Installed"]
+                estimator_models = ["TensorRT_Not_Installed"]
+            elif precision:
                 if HAS_TENSORRT:
-                    detector_models.append("auto-build")
+                    all_trt_files = [f for f in os.listdir(models_dir) if f.endswith(".trt")]
+
+                    detector_prefix = f"yolox_l_{precision}"
+                    matching_detector_models = [f for f in all_trt_files if f.startswith(detector_prefix) and f.endswith(".trt")]
+                    detector_models = sorted(matching_detector_models) if matching_detector_models else ["auto-build"]
+
+                    estimator_prefix = f"dw-ll_ucoco_384_{precision}"
+                    matching_estimator_models = [f for f in all_trt_files if f.startswith(estimator_prefix) and f.endswith(".trt")]
+                    estimator_models = sorted(matching_estimator_models) if matching_estimator_models else ["auto-build"]
                 else:
-                    detector_models.append("TensorRT_Not_Installed")
-            if not estimator_models:
-                estimator_models.append("auto-download")
-                if HAS_TENSORRT:
-                    estimator_models.append("auto-build")
-                else:
-                    estimator_models.append("TensorRT_Not_Installed")
-            return (sorted(list(set(detector_models))), sorted(list(set(estimator_models))))
+                    detector_models = ["TensorRT_Not_Installed"]
+                    estimator_models = ["TensorRT_Not_Installed"]
+            else:
+                detector_models = ["select_precision"]
+                estimator_models = ["select_precision"]
+
+        return (detector_models, estimator_models)
 
     @staticmethod
     def _get_model_list_api(provider_type, precision=None):

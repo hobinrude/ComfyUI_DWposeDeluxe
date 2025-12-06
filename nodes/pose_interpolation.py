@@ -41,9 +41,10 @@ class PoseInterpolation:
                     x_coords = pose_kpts_2d[:, 0]
                     y_coords = pose_kpts_2d[:, 1]
 
+                    # Filter out keypoints with 0 confidence before calculating bounds
                     valid_kpts_indices = np.where(pose_kpts_2d[:, 2] > 0)[0]
                     if len(valid_kpts_indices) == 0:
-                        continue
+                        continue # No valid keypoints for this person
 
                     valid_x = x_coords[valid_kpts_indices]
                     valid_y = y_coords[valid_kpts_indices]
@@ -51,6 +52,8 @@ class PoseInterpolation:
                     min_x, max_x = np.min(valid_x), np.max(valid_x)
                     min_y, max_y = np.min(valid_y), np.max(valid_y)
 
+                    # Bounding box coordinates are normalized, convert to pixels for area calculation
+                    # The canvas width/height are available here
                     bbox_width = (max_x - min_x) * canvas_width
                     bbox_height = (max_y - min_y) * canvas_height
                     
@@ -65,7 +68,7 @@ class PoseInterpolation:
                 return None, None, None
             return biggest_pose_data, canvas_width, canvas_height
         
-        return people[0], canvas_width, canvas_height
+        return people[0], canvas_width, canvas_height # Only one person, return it directly
 
     RETURN_TYPES = ("POSE_KEYPOINT",)
     RETURN_NAMES = ("keypoints",)
@@ -96,6 +99,7 @@ class PoseInterpolation:
             logger.error("Could not extract valid start or end pose for interpolation.")
             raise InterruptProcessingException("Invalid start or end pose data for interpolation.")
 
+        # Part D (Output Canvas Size Handling): Check canvas dimensions and set target_width/height
         target_width = start_width
         target_height = start_height
 
@@ -104,6 +108,8 @@ class PoseInterpolation:
             target_width = max(start_width, end_width)
             target_height = max(start_height, end_height)
 
+        # Part B: Check Compatibility
+        # Define all possible keypoint subsets
         keypoint_subsets = [
             "pose_keypoints_2d",
             "face_keypoints_2d",
@@ -117,6 +123,9 @@ class PoseInterpolation:
             end_kpts = end_pose_data.get(subset_name)
 
             if start_kpts is not None and end_kpts is not None:
+                # Ensure they have the same number of keypoints for interpolation
+                # Keypoints are stored as [x, y, conf, x, y, conf, ...]
+                # So the length of the list should be a multiple of 3
                 if len(start_kpts) == len(end_kpts) and len(start_kpts) % 3 == 0:
                     common_subsets[subset_name] = (np.array(start_kpts).reshape(-1, 3), np.array(end_kpts).reshape(-1, 3))
                 else:
@@ -128,15 +137,19 @@ class PoseInterpolation:
             logger.error("No common keypoint subsets found for interpolation.")
             raise InterruptProcessingException("Cannot interpolate without common keypoints.")
 
+        # Part C: Perform Linear Interpolation
         interpolated_frames = []
         for i in range(frame_count):
             t = 0.0 if frame_count == 1 else i / (frame_count - 1)
             
             interpolated_person_data = {}
+            # Copy other non-keypoint data from start_pose_data if necessary
+            # For example, face_box if it exists and is not interpolated
             if "face_box" in start_pose_data and "face_box" in end_pose_data:
                 start_box = np.array(start_pose_data["face_box"])
                 end_box = np.array(end_pose_data["face_box"])
                 interpolated_person_data["face_box"] = (start_box * (1 - t) + end_box * t).tolist()
+            # ... potentially other data to copy or interpolate ...
 
             for subset_name, (start_kpts_np, end_kpts_np) in common_subsets.items():
                 interpolated_kpts_np = (start_kpts_np * (1 - t) + end_kpts_np * t).reshape(-1).tolist()
@@ -149,8 +162,10 @@ class PoseInterpolation:
             }
             interpolated_frames.append(interpolated_frame)
         
+        # Placeholder for Part D logic (return the interpolated_frames)
         logger.info(f"Linear interpolation completed. Generated {len(interpolated_frames)} frames.")
         
+        # Temporarily returning the interpolated frames
         return (interpolated_frames,)
 
 NODE_CLASS_MAPPINGS = {"PoseInterpolation": PoseInterpolation}

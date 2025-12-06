@@ -40,10 +40,11 @@ app.registerExtension({
                 app.graph.setDirtyCanvas(true, true);
             };
 
+            // Helper function to upload files
             async function uploadFile(file, progressCallback) {
                 try {
                     const body = new FormData();
-                    body.append("image", file);
+                    body.append("image", file); // ComfyUI's API uses 'image' for file uploads, even for JSON
                     const url = api.apiURL("/upload/image");
 
                     const resp = await new Promise((resolve, reject) => {
@@ -67,9 +68,10 @@ app.registerExtension({
 
             // Add the "Upload keypoint dataset" button
             const uploadButton = node.addWidget("button", "Upload keypoint dataset", "upload", async () => {
+                // Create a hidden file input element
                 const fileInput = document.createElement("input");
                 fileInput.type = "file";
-                fileInput.accept = ".json";
+                fileInput.accept = ".json"; // Accept only JSON files
                 fileInput.style.display = "none";
                 document.body.appendChild(fileInput);
 
@@ -77,24 +79,27 @@ app.registerExtension({
                     if (fileInput.files.length > 0) {
                         try {
                             const uploadedFile = fileInput.files[0];
-                            node.progress = 0;
+                            // Show progress (optional)
+                            node.progress = 0; // Initialize progress
                             const resp = await uploadFile(uploadedFile, (p) => { node.progress = p; });
-                            node.progress = undefined;
+                            node.progress = undefined; // Clear progress
 
-                            const filename = JSON.parse(resp.responseText).name;
+                            const filename = JSON.parse(resp.responseText).name; // Get the filename from the API response
                             
+                            // Refresh the file list and select the new file
                             await updateFileList(filename);
 
                         } catch (error) {
                             console.error("Error during upload:", error);
                         }
                     }
-                    document.body.removeChild(fileInput);
+                    document.body.removeChild(fileInput); // Clean up the hidden input
                 };
 
+                // Programmatically click the hidden file input
                 fileInput.click();
             });
-            uploadButton.options.serialize = false;
+            uploadButton.options.serialize = false; // Don't save this button in workflow
 
             // Initial file list load
             setTimeout(() => {

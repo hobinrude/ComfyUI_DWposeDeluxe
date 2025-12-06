@@ -105,12 +105,13 @@ def inference_detector(session, oriImg, model_type="ONNX", nms_threshold=0.45, s
         cudaStream = torch.cuda.current_stream().cuda_stream
         img_bchw = torch.from_numpy(img[None, :, :, :])
         trt_output = session.infer({"images": img_bchw}, cudaStream)
-        output = trt_output['output'].cpu().numpy()
-    else: # ONNX
+        output_array = trt_output['output'].cpu().numpy()
+    else:  # ONNX
         ort_inputs = {session.get_inputs()[0].name: img[None, :, :, :]}
-        output = session.run(None, ort_inputs)
+        onnx_output = session.run(None, ort_inputs)
+        output_array = onnx_output[0]
 
-    predictions = demo_postprocess(output[0], input_shape)[0]
+    predictions = demo_postprocess(output_array, input_shape)[0]
 
     boxes = predictions[:, :4]
     scores = predictions[:, 4:5] * predictions[:, 5:]
