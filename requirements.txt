@@ -1,4 +1,3 @@
-tensorrt-cu12
 onnxruntime-gpu
 opencv-python
 matplotlib
