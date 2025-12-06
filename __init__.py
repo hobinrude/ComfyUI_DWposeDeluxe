@@ -37,42 +37,55 @@ print(r"""
 ----------------------- github.com/hobinrude/DWposeDeluxe -----------------------
 """)
 
-import importlib.metadata
+def auto_install_and_check_tensorrt():
 
-def is_tensorrt_installed():
     try:
         import tensorrt
-        return True, None
+        logger.info(f"TensorRT {tensorrt.__version__} detected.")
+        return True
     except ImportError:
-        for dist in importlib.metadata.distributions():
-            if dist.metadata['name'].startswith('tensorrt-cu'):
-                return True, f"{dist.metadata['name']} {dist.version}"
-    return False, None
-
-HAS_TENSORRT, trt_version_string = is_tensorrt_installed()
-
-if HAS_TENSORRT:
-    logger.info(f"{trt_version_string} detected")
-else:
-    logger.warning(f"TensorRT not found. GPU (TensorRT) inference will not be available")
+        logger.warning("DWposeDeluxe: TensorRT not found.")
+        
     try:
         import torch
-        if torch.cuda.is_available():
-            cuda_version = torch.version.cuda
-            if cuda_version:
-                cuda_major_version = "cu" + cuda_version.split('.')[0]
-                logger.info(f"Detected CUDA version: {cuda_version}. You may need to install 'tensorrt-{cuda_major_version}' and 'pycuda'")
-                logger.info(f"Recommended installation command: pip install tensorrt-{cuda_major_version} pycuda")
-                logger.info(f"Installing TensorRT via pip can sometimes cause dependency conflicts with your existing PyTorch installation")
-                logger.info(f"It is highly recommended to use a dedicated Python virtual environment for ComfyUI to avoid breaking other installations")
-            else:
-                logger.warning(f"CUDA is available, but torch.version.cuda is not reporting a version. Cannot recommend specific TensorRT package")
-        else:
-            logger.warning(f"CUDA is not available. TensorRT is not applicable")
+        if not torch.cuda.is_available() or not hasattr(torch.version, 'cuda'):
+            logger.warning("PyTorch with CUDA is not available. Skipping TensorRT auto-installation.")
+            return False
+            
+        cuda_version_str = torch.version.cuda
+        major_version = cuda_version_str.split('.')[0]
+        
+        supported_versions = ["11", "12", "13"]
+        if major_version not in supported_versions:
+            logger.error(f"Detected CUDA version {major_version}.x is not officially supported for automatic TensorRT installation.")
+            logger.error("Please install the appropriate TensorRT package for your environment manually.")
+            return False
+            
+        package_name = f"tensorrt-cu{major_version}"
+        
     except ImportError:
-        logger.warning(f"PyTorch not found. Cannot check CUDA version for TensorRT recommendations")
+        logger.warning(f"Could not import PyTorch to detect CUDA version. Skipping TensorRT auto-installation.")
+        return False
     except Exception as e:
-        logger.warning(f"An unexpected error occurred while checking for CUDA/TensorRT:\n            {e}")
+        logger.error(f"An error occurred while detecting CUDA version: {e}. Skipping TensorRT auto-installation.")
+        return False
+
+    logger.info(f"Attempting to install '{package_name}' for CUDA {major_version}.x. This may take a while...")
+    
+    command = [sys.executable, "-m", "pip", "install", "--user", package_name]
+    
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        logger.info(f"Successfully installed {package_name}. Please restart ComfyUI for the changes to take effect.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FAILED to install '{package_name}'.")
+        logger.error(f"  Command: {' '.join(command)}")
+        logger.error(f"  Stderr: {e.stderr.strip()}")
+        logger.error(f"Please try installing the package manually.")
+    
+    return False
+
+HAS_TENSORRT = auto_install_and_check_tensorrt()
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
 COMFYUI_ROOT = os.path.abspath(os.path.join(NODE_DIR, os.pardir, os.pardir))
