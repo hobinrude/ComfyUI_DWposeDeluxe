@@ -63,7 +63,7 @@ app.registerExtension({
                 const providerType = providerWidget.value;
                 const precision = precisionWidget.value;
 
-                let url = `/dwpose_adv/get_model_list?provider_type=${providerType}`;
+                let url = `/dwpose-dlx/get-models-list?provider_type=${providerType}`;
                 if (providerType === "GPU" && precision) {
                     url += `&precision=${precision}`;
                 }
@@ -72,25 +72,28 @@ app.registerExtension({
                     const response = await fetch(url);
                     const data = await response.json();
                     
-                    if (detectorModelWidget) {
-                        const currentDetectorValue = detectorModelWidget.value;
-                        detectorModelWidget.options.values = data.detector_models;
-                        if (!data.detector_models.includes(currentDetectorValue)) {
-                            detectorModelWidget.value = detectorModelWidget.options.values[0];
-                        } else {
-                            detectorModelWidget.value = currentDetectorValue;
-                        }
-                    }
+                    const handleWidgetUpdate = (widget, models) => {
+                        if (!widget) return;
 
-                    if (estimatorModelWidget) {
-                        const currentEstimatorValue = estimatorModelWidget.value;
-                        estimatorModelWidget.options.values = data.estimator_models;
-                        if (!data.estimator_models.includes(currentEstimatorValue)) {
-                            estimatorModelWidget.value = estimatorModelWidget.options.values[0];
+                        if (models.length === 1 && models[0] === "No compatible GPU detected") {
+                            widget.options.values = models;
+                            widget.value = models[0];
+                            widget.disabled = true;
                         } else {
-                            estimatorModelWidget.value = currentEstimatorValue;
+                            widget.disabled = false;
+                            const currentValue = widget.value;
+                            widget.options.values = models;
+                            if (!models.includes(currentValue)) {
+                                widget.value = widget.options.values[0];
+                            } else {
+                                widget.value = currentValue;
+                            }
                         }
-                    }
+                    };
+
+                    handleWidgetUpdate(detectorModelWidget, data.detector_models);
+                    handleWidgetUpdate(estimatorModelWidget, data.estimator_models);
+
                 } catch (error) {
                     console.error("Error fetching model lists:", error);
                     if (detectorModelWidget) detectorModelWidget.options.values = ["Error"];

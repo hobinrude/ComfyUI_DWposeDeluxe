@@ -1,9 +1,9 @@
-# ComfyUI_DWposeDeluxe/dwpose/onnxdet.py
+# ComfyUI_DWposeDeluxe/dwpose/detection.py
 
 import cv2
 import numpy as np
-
-import onnxruntime
+import torch
+import onnxruntime as ort
 
 def nms(boxes, scores, nms_thr):
     """Single class NMS implemented in Numpy."""
@@ -79,7 +79,7 @@ def demo_postprocess(outputs, img_size, p6=False):
 
     return outputs
 
-def preprocess(img, input_size, swap=(2, 0, 1)):
+def preprocess_det(img, input_size, swap=(2, 0, 1)):
     if len(img.shape) == 3:
         padded_img = np.ones((input_size[0], input_size[1], 3), dtype=np.uint8) * 114
     else:
@@ -97,29 +97,37 @@ def preprocess(img, input_size, swap=(2, 0, 1)):
     padded_img = np.ascontiguousarray(padded_img, dtype=np.float32)
     return padded_img, r
 
-def inference_detector(session, oriImg):
-    input_shape = (640,640)
-    img, ratio = preprocess(oriImg, input_shape)
+def inference_detector(session, oriImg, model_type="ONNX", nms_threshold=0.45, score_threshold=0.1):
+    input_shape = (640, 640)
+    img, ratio = preprocess_det(oriImg, input_shape)
 
-    ort_inputs = {session.get_inputs()[0].name: img[None, :, :, :]}
-    output = session.run(None, ort_inputs)
+    if model_type == "TensorRT":
+        cudaStream = torch.cuda.current_stream().cuda_stream
+        img_bchw = torch.from_numpy(img[None, :, :, :])
+        trt_output = session.infer({"images": img_bchw}, cudaStream)
+        output = trt_output['output'].cpu().numpy()
+    else: # ONNX
+        ort_inputs = {session.get_inputs()[0].name: img[None, :, :, :]}
+        output = session.run(None, ort_inputs)
+
     predictions = demo_postprocess(output[0], input_shape)[0]
 
     boxes = predictions[:, :4]
     scores = predictions[:, 4:5] * predictions[:, 5:]
 
     boxes_xyxy = np.ones_like(boxes)
-    boxes_xyxy[:, 0] = boxes[:, 0] - boxes[:, 2]/2.
-    boxes_xyxy[:, 1] = boxes[:, 1] - boxes[:, 3]/2.
-    boxes_xyxy[:, 2] = boxes[:, 0] + boxes[:, 2]/2.
-    boxes_xyxy[:, 3] = boxes[:, 1] + boxes[:, 3]/2.
+    boxes_xyxy[:, 0] = boxes[:, 0] - boxes[:, 2] / 2.
+    boxes_xyxy[:, 1] = boxes[:, 1] - boxes[:, 3] / 2.
+    boxes_xyxy[:, 2] = boxes[:, 0] + boxes[:, 2] / 2.
+    boxes_xyxy[:, 3] = boxes[:, 1] + boxes[:, 3] / 2.
     boxes_xyxy /= ratio
-    dets = multiclass_nms(boxes_xyxy, scores, nms_thr=0.45, score_thr=0.1)
+    dets = multiclass_nms(boxes_xyxy, scores, nms_thr=nms_threshold, score_thr=score_threshold)
+    
     if dets is not None:
         final_boxes, final_scores, final_cls_inds = dets[:, :4], dets[:, 4], dets[:, 5]
-        isscore = final_scores>0.3
+        isscore = final_scores > 0.3
         iscat = final_cls_inds == 0
-        isbbox = [ i and j for (i, j) in zip(isscore, iscat)]
+        isbbox = [i and j for (i, j) in zip(isscore, iscat)]
         final_boxes = final_boxes[isbbox]
     else:
         final_boxes = np.array([])

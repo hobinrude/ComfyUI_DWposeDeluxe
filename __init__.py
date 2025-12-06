@@ -42,7 +42,7 @@ import importlib.metadata
 def is_tensorrt_installed():
     try:
         import tensorrt
-        return True, f"[DWposeNode][{fg('green')}INFO{attr('reset')}] TensorRT {tensorrt.__version__}"
+        return True, None
     except ImportError:
         for dist in importlib.metadata.distributions():
             if dist.metadata['name'].startswith('tensorrt-cu'):
