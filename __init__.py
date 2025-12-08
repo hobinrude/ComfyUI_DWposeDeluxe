@@ -72,7 +72,7 @@ def auto_install_and_check_tensorrt():
 
     logger.info(f"Attempting to install '{package_name}' for CUDA {major_version}.x. This may take a while...")
     
-    command = [sys.executable, "-m", "pip", "install", "--user", package_name]
+    command = [sys.executable, "-m", "pip", "install", package_name]
     
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
