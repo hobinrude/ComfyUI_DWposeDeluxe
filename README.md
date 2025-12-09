@@ -1,7 +1,5 @@
 # ComfyUI DWpose Deluxe
 
-**Pre-release sneak-peek**
-
 A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole-Body Pose Estimation) model for high-quality pose detection. This node supports both CPU (ONNX) and high-performance GPU (TensorRT) execution, with automatic model downloading and engine building. Runs on average 20x faster than pose estimators without TensorRT engine booster. Added functionality for drawing feet, composite image with optional frame count for pose debugging, json dataset output and json converter node which can convert pixel-absolute coordinates to canvas-relative format.
 
 ![example](https://github.com/user-attachments/assets/c31ebb40-4bee-4922-b8b8-4e5333773d9a)
@@ -133,6 +131,10 @@ To use without GPU support a CPU version of `onnxruntime` is needed instead of `
 
 ## Changelog
 
+- 2025-12-09
+
+  - Resolved issues with manager install
+
 - 2025-12-04
 
   - Added PosePrinter and Interpolation nodes
@@ -151,9 +153,9 @@ To use without GPU support a CPU version of `onnxruntime` is needed instead of `
 
 ## Known issues
 
+- Manager might give problems with installing correct TensorRT version. Install it manually if it fails on first run.
 - UI is not optimized for Nodes 2.0
 - Thresholds need to be looked at
-- Not enough stars 🤪
 
 This node pack is still under development, so reporting any `Issues` is much apperciated.
 Same goes for additional feature requests, which are more than welcome in `Issues` section.
