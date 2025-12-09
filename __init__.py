@@ -76,7 +76,8 @@ def auto_install_and_check_tensorrt():
     
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
-        logger.info(f"Successfully installed {package_name}. Please restart ComfyUI for the changes to take effect.")
+        logger.info(f"Successfully installed {package_name}") 
+        logger.warning(f"Please restart ComfyUI for the changes to take effect.")
     except subprocess.CalledProcessError as e:
         logger.error(f"FAILED to install '{package_name}'.")
         logger.error(f"  Command: {' '.join(command)}")
