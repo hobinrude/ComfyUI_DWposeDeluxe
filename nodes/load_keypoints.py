@@ -1,5 +1,6 @@
 # ComfyUI_DWposeDeluxe/nodes/load_keypoints.py
 
+from ..node_configs import DWposeNodeBase
 import os
 import json
 import folder_paths
@@ -21,8 +22,8 @@ def detect_format(data):
 
 def detect_structure(json_string: str) -> str:
     if ',\n' in json_string:
-        return "pretty"
-    return "default"
+        return "pretty_json"
+    return "one-line_string"
 
 
 def get_keypoint_files_from_input_dir():
@@ -37,7 +38,7 @@ def get_keypoint_files_from_input_dir():
     return files
 
 
-class LoadPoseKeypoints:
+class LoadPoseKeypoints(DWposeNodeBase):
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -49,10 +50,10 @@ class LoadPoseKeypoints:
             },
         }
 
-    CATEGORY = "DWposeDeluxe/IO"
+    CATEGORY = "DWposeDeluxe"
 
     RETURN_TYPES = ("POSE_KEYPOINT", "STRING")
-    RETURN_NAMES = ("pose_keypoints", "keypoint_info")
+    RETURN_NAMES = ("pose_keypoints", "input_keypoint_info")
     FUNCTION = "load_keypoints"
 
     def load_keypoints(self, file: str):

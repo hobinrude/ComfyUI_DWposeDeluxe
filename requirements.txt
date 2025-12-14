@@ -1,5 +1,7 @@
+onxxruntime
 onnxruntime-gpu
 opencv-python
 matplotlib
 polygraphy
+requests
 colored

@@ -1,13 +1,15 @@
 # ComfyUI_DWposeDeluxe/nodes/custom_options.py
 
+from ..node_configs import DWposeNodeBase
+
 DWOPOSE_CUSTOM_OPTIONS_TYPE = "DWOPOSE_CUSTOM_OPTIONS"
 
 
-class CustomOptions:
+class CustomOptions(DWposeNodeBase):
     RETURN_TYPES = (DWOPOSE_CUSTOM_OPTIONS_TYPE,)
     RETURN_NAMES = ("custom_options",)
     FUNCTION = "package_options"
-    CATEGORY = "DWposeDeluxe Options"
+    CATEGORY = "DWposeDeluxe"
 
 
     @classmethod
@@ -23,7 +25,7 @@ class CustomOptions:
                 "body_threshold": ("FLOAT", {"default": 0.30, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "face_threshold": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "hand_threshold": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "face_padding": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "face_padding": ("INT", {"default": 0, "min": 0, "max": 99, "step": 1}),
                 "neck_validity": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "nms_threshold": ("FLOAT", {"default": 0.45, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "score_threshold": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1.0, "step": 0.01}),

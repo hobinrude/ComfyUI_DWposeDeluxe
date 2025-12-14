@@ -7,7 +7,7 @@ import logging
 from enum import Enum
 
 class TEXTS(Enum):
-    LOGGER_PREFIX = "DWposeNode"
+    LOGGER_PREFIX = "DWposeDLX"
 
 class ColoredFormatter(logging.Formatter):
     COLORS = {
