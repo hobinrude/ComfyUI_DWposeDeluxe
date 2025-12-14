@@ -96,10 +96,6 @@ MODEL_URLS = {
 }
 
 def ensure_models_downloaded():
-    if requests is None:
-        logger.error(f"Cannot download models because 'requests' library is missing or failed to install")
-        return
-
     # logger.info(f"Checking for required ONNX models...")
     download_count = 0
     for model_name, (url, target_dir) in MODEL_URLS.items():
