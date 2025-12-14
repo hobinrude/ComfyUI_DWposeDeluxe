@@ -8,9 +8,14 @@ import cv2
 eps = 0.01
 
 
-def smart_resize(x, s): Ht, Wt = s; Ho, Wo = x.shape[:2]; k = float(Ht + Wt) / float(Ho + Wo); return cv2.resize(x, (int(Wt), int(Ht)), interpolation=cv2.INTER_AREA if k < 1 else cv2.INTER_LANCZOS4)
+def smart_resize(x, s):
+    Ht, Wt = s
+    Ho, Wo = x.shape[:2]
+    k = float(Ht + Wt) / float(Ho + Wo)
+    return cv2.resize(x, (int(Wt), int(Ht)), interpolation=cv2.INTER_AREA if k < 1 else cv2.INTER_LANCZOS4)
 def padRightDownCorner(img, stride, padValue):
-    h = img.shape[0]; w = img.shape[1]
+    h = img.shape[0]
+    w = img.shape[1]
     pad = [0, 0, 0 if (h % stride == 0) else stride - (h % stride), 0 if (w % stride == 0) else stride - (w % stride)]
     img_padded = cv2.copyMakeBorder(img, pad[0], pad[2], pad[1], pad[3], cv2.BORDER_CONSTANT, value=padValue)
     return img_padded, pad
@@ -159,34 +164,44 @@ def draw_bodypose(canvas, candidate, subset, show_feet, options={}):
 def draw_handpose(canvas, all_hand_peaks, options={}):
     H, W, C = canvas.shape
 
-    thickness_mod = options.get('hand_line_thickness_modifier', 0); dot_size_mod = options.get('hand_dot_size_modifier', 0)
-    line_thickness = max(1, 2 + thickness_mod); dot_radius = max(1, 4 + dot_size_mod)
+    thickness_mod = options.get('hand_line_thickness_modifier', 0)
+    dot_size_mod = options.get('hand_dot_size_modifier', 0)
+    line_thickness = max(1, 2 + thickness_mod)
+    dot_radius = max(1, 4 + dot_size_mod)
     edges = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [0, 9], [9, 10], \
              [10, 11], [11, 12], [0, 13], [13, 14], [14, 15], [15, 16], [0, 17], [17, 18], [18, 19], [19, 20]]
     for hand_idx, peaks in enumerate(all_hand_peaks):
         peaks = np.array(peaks)
 
         if peaks.ndim != 2 or peaks.shape[1] != 2: continue
-        num_lines_drawn = 0; num_dots_drawn = 0
+        num_lines_drawn = 0
+        num_dots_drawn = 0
         for ie, e in enumerate(edges):
              if np.any(np.array(e) >= len(peaks)): continue
-             p1_idx, p2_idx = e; x1_norm, y1_norm = peaks[p1_idx]; x2_norm, y2_norm = peaks[p2_idx]
+             p1_idx, p2_idx = e
+             x1_norm, y1_norm = peaks[p1_idx]
+             x2_norm, y2_norm = peaks[p2_idx]
              if x1_norm > eps and y1_norm > eps and x2_norm > eps and y2_norm > eps:
-                 x1, y1 = int(x1_norm * W), int(y1_norm * H); x2, y2 = int(x2_norm * W), int(y2_norm * H)
-                 hsv_color = [ie / float(len(edges)), 1.0, 1.0]; rgb_color_float = matplotlib.colors.hsv_to_rgb(hsv_color) * 255
+                 x1, y1 = int(x1_norm * W), int(y1_norm * H)
+                 x2, y2 = int(x2_norm * W), int(y2_norm * H)
+                 hsv_color = [ie / float(len(edges)), 1.0, 1.0]
+                 rgb_color_float = matplotlib.colors.hsv_to_rgb(hsv_color) * 255
                  bgr_color_int = (int(rgb_color_float[2]), int(rgb_color_float[1]), int(rgb_color_float[0]))
-                 cv2.line(canvas, (x1, y1), (x2, y2), bgr_color_int, thickness=line_thickness); num_lines_drawn += 1
+                 cv2.line(canvas, (x1, y1), (x2, y2), bgr_color_int, thickness=line_thickness)
+                 num_lines_drawn += 1
         for i, keypoint in enumerate(peaks):
             x_norm, y_norm = keypoint
             if x_norm > eps and y_norm > eps:
                  x, y = int(x_norm * W), int(y_norm * H)
-                 cv2.circle(canvas, (x, y), dot_radius, (0, 0, 255), thickness=-1); num_dots_drawn += 1
+                 cv2.circle(canvas, (x, y), dot_radius, (0, 0, 255), thickness=-1)
+                 num_dots_drawn += 1
     return canvas
 
 
 def draw_facepose(canvas, all_lmks, options={}):
     H, W, C = canvas.shape
-    dot_size_mod = options.get('face_dot_size_modifier', 0); dot_radius = max(1, 3 + dot_size_mod)
+    dot_size_mod = options.get('face_dot_size_modifier', 0)
+    dot_radius = max(1, 3 + dot_size_mod)
     for lmks in all_lmks:
         lmks = np.array(lmks)
         if lmks.ndim != 2 or lmks.shape[1] != 2: continue
