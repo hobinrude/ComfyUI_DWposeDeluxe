@@ -1,4 +1,4 @@
-onxxruntime
+onnxruntime
 onnxruntime-gpu
 opencv-python
 matplotlib
