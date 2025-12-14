@@ -166,6 +166,14 @@ It works even on prehistoric setups like Core 2 Duo (direct successor of 486 pro
 
 ![oldschool-test](https://github.com/user-attachments/assets/f9ad5bf0-4708-4fb1-8528-99d8069198e9)
 
+## Other useful ComfyUI DW/OpenPose editing node packs:
+
+**ComfyUI Proportion Changer** Includes a cool pose editing node allowing creation of oddly shaped pose skeletons. Perfect for creating motion drivers of animated cartoon characters, antropomorphic animals, robots and other humanoid creatures.
+https://github.com/grmchn/ComfyUI-ProportionChanger
+
+**ComfyUI Pose Interpolation** Includes a more advanced algorithm for interpolating between 2 static poses as well as to adjust the length of each body part individually which can produce super-deformed, unnaturally funny human poses. 
+https://github.com/fssorc/ComfyUI_pose_inter
+
 ## Acknowledgements & License
 
 This project is heavily based on the work of **yuvraj108c** and his original **[ComfyUI-Dwpose-Tensorrt](https://github.com/yuvraj108c/ComfyUI-Dwpose-Tensorrt)** repository. Big chunks of code have been repurposed straight from his project.
