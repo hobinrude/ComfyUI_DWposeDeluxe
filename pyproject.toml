@@ -8,6 +8,7 @@ license = {file = "LICENSE"}
 #     # For OS-independent nodes (works on all operating systems)
 #     "Operating System :: OS Independent",
 #
+#
 #     # OR for OS-specific nodes, specify the supported systems:
 #     "Operating System :: Microsoft :: Windows",  # Windows specific
 #     "Operating System :: POSIX :: Linux",  # Linux specific

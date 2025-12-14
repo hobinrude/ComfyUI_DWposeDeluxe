@@ -248,20 +248,4 @@ add_node_config("PoseResize", NodeConfig(
     """
 ))
 
-add_node_config("PoseTrackerNode", NodeConfig(
-    short_description="Tracks pose centers across frames to create motion trails.",
-    long_description="""
-**Function:** Tracks the center of detected poses across frames to create motion trails.
 
-### Inputs
-- **keypoints:** The keypoint data sequence to track.
-
-### Parameters
-- **center_method:** Method for calculating the pose center (`bbox_centroid` or `gravity_center`).
-- **distance_threshold:** Maximum distance to link poses between frames.
-- **max_frame_age:** Number of frames a trail persists without detection.
-
-### Outputs
-- **IMAGE:** An image sequence showing the tracked motion trails.
-    """
-))

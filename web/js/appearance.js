@@ -10,7 +10,6 @@ const NODE_COLORS = {
     "KeypointConverter": "blue",
     "LoadPoseKeypoints": "blue",
     "FrameNumberNode": "blue",
-    "PoseTrackerNode": "blue",
     "KeypointPrinter": "blue",
     "PoseInterpolation": "blue",
     "PoseResize": "blue"
