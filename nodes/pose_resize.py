@@ -8,22 +8,24 @@ import numpy as np
 from comfy.model_management import InterruptProcessingException
 from ..scripts import logger
 
+
 def detect_coordinate_format(data):
     for item in data:
         for person in item.get("people", []):
             pts = person.get("pose_keypoints_2d", [])
             if pts:
-                # Check a few keypoints to see if they are > 1.0
                 for i in range(0, min(len(pts), 15), 3):
                     if abs(pts[i]) > 1.0 or abs(pts[i + 1]) > 1.0:
                         return "absolute"
     return "normalized"
+
 
 class PoseResize(DWposeNodeBase):
     CATEGORY = "DWposeDeluxe"
     RETURN_TYPES = ("POSE_KEYPOINT",)
     RETURN_NAMES = ("pose_keypoints",)
     FUNCTION = "execute"
+
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -45,11 +47,11 @@ class PoseResize(DWposeNodeBase):
             }
         }
 
+
     def execute(self, pose_keypoints, crop_to_pose, width, height, resize_method, left, right, top, bottom, extra_padding, x_offset, y_offset, divisible_by):
         if not pose_keypoints:
             return ([],)
 
-        # 1. Initial Setup: Load data and convert to absolute coordinates
         data = json.loads(pose_keypoints) if isinstance(pose_keypoints, str) else copy.deepcopy(pose_keypoints)
         if not data:
             return ([],)
@@ -72,14 +74,12 @@ class PoseResize(DWposeNodeBase):
                                     pts[i] *= norm_width
                                     pts[i+1] *= norm_height
         
-        # Initialize transformation variables
         scale_x, scale_y = 1.0, 1.0
         offset_x, offset_y = 0.0, 0.0
         
         canvas_w = data[0].get("canvas_width", 0)
         canvas_h = data[0].get("canvas_height", 0)
         if canvas_w == 0 or canvas_h == 0:
-            # Fallback for missing canvas size: derive from keypoints
             max_x, max_y = 0, 0
             for frame in data:
                  for person in frame.get("people", []):
@@ -92,7 +92,6 @@ class PoseResize(DWposeNodeBase):
             canvas_w, canvas_h = max_x, max_y
             if canvas_w == 0 or canvas_h == 0: return ([],)
 
-        # 2. Crop to Pose
         if crop_to_pose:
             min_kx, min_ky = float('inf'), float('inf')
             max_kx, max_ky = float('-inf'), float('-inf')
@@ -112,7 +111,6 @@ class PoseResize(DWposeNodeBase):
                 offset_y -= min_ky
                 canvas_w, canvas_h = max_kx - min_kx, max_ky - min_ky
         
-        # 3. Width/Height Resize
         original_aspect_ratio = canvas_w / canvas_h if canvas_h > 0 else 1.0
 
         target_w = width if width > 0 else canvas_w
@@ -137,19 +135,16 @@ class PoseResize(DWposeNodeBase):
             offset_y += (target_h - canvas_h) / 2
             canvas_w, canvas_h = target_w, target_h
 
-        # 4. Left/Right/Top/Bottom Padding/Cropping
         offset_x += left
         offset_y += top
         canvas_w += left + right
         canvas_h += top + bottom
 
-        # 5. Extra Padding
         offset_x += extra_padding
         offset_y += extra_padding
         canvas_w += 2 * extra_padding
         canvas_h += 2 * extra_padding
 
-        # 6. X/Y Offset
         offset_x += x_offset
         offset_y += y_offset
 
@@ -162,7 +157,6 @@ class PoseResize(DWposeNodeBase):
         if abs(y_offset) > canvas_h:
             logger.warning(f"[PoseResize] y_offset ({y_offset}) is larger than the canvas height ({canvas_h}). The pose is off-canvas.")
 
-        # 7. Divisible By
         if divisible_by > 1:
             rem_w = canvas_w % divisible_by
             if rem_w != 0:
@@ -175,7 +169,6 @@ class PoseResize(DWposeNodeBase):
                 canvas_h += pad_h
                 offset_y += pad_h / 2
 
-        # 8. Apply accumulated transformations to all keypoints
         for frame in data:
             for person in frame.get("people", []):
                 for key in ["pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
@@ -189,7 +182,6 @@ class PoseResize(DWposeNodeBase):
             frame["canvas_width"] = int(canvas_w)
             frame["canvas_height"] = int(canvas_h)
             
-            # 9. Convert back to normalized if necessary
             if input_format == "normalized" and canvas_w > 0 and canvas_h > 0:
                 for person in frame.get("people", []):
                     for key in ["pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d"]:

@@ -1,8 +1,9 @@
 # ComfyUI_DWposeDeluxe/main.py
 
 import os
-import cv2
+import gc
 import sys
+import cv2
 import time
 import json
 import torch
@@ -15,6 +16,7 @@ from comfy.model_management import InterruptProcessingException
 from . import HAS_TENSORRT
 from .scripts import logger
 from .scripts import progress
+from .scripts import memplot
 from .nodes.custom_options import DWOPOSE_CUSTOM_OPTIONS_TYPE
 
 
@@ -105,6 +107,7 @@ class DWposeDeluxeNode(DWposeNodeBase):
             "show_feet": ("BOOLEAN", {"default": True}),
             "show_face": ("BOOLEAN", {"default": True}),
             "show_hands": ("BOOLEAN", {"default": True}),
+            "make_blend": ("BOOLEAN", {"default": False}),
             "crop_face": ("BOOLEAN", {"default": False}),
             "provider_type": (["CPU", "GPU"], {"default": "CPU"}),
             "precision": (["fp16", "fp32"], {"default": "fp32"}),
@@ -293,19 +296,16 @@ class DWposeDeluxeNode(DWposeNodeBase):
         return dwpose_detector, built_new_model
 
 
-    def process_frames(self, dwpose_detector, image, batch_size, height, width, 
+    def process_frames(self, dwpose_detector, image, pose_output_tensor, batch_size, height, width, 
                          show_body, show_face, show_hands, show_feet, crop_face, poses_to_detect,
                          actual_options,
                          provider_type, precision):
 
-        logger.info(f"Limiting pose detections to top {poses_to_detect} people by bounding box area")
+        logger.info(f"Limiting pose detections to top {poses_to_detect} people by bounding box area\n")
         logger.info(f"Processing {batch_size} frames of size {width}x{height}" + (f" using TensorRT ({precision})" if provider_type == "GPU" else ""))
-        
-        pbar = progress(batch_size, label="Frame")
+        pbar = progress(batch_size, label="Pose")
 
-        results_list = []
         all_keypoints_data = []
-
         face_data_needed = show_face or crop_face
 
         for i in range(batch_size):
@@ -333,17 +333,33 @@ class DWposeDeluxeNode(DWposeNodeBase):
                 import traceback
                 traceback.print_exc()
                 processed_np = np.zeros_like(img_np_hwc)
+            
+            pose_np = self.validate_and_prepare_frame(processed_np, height, width)
+            
+            if pose_np.shape[0] != height or pose_np.shape[1] != width:
+                resized_pose_np = cv2.resize(pose_np, (width, height), interpolation=cv2.INTER_AREA)
+            else:
+                resized_pose_np = pose_np
 
-            results_list.append(processed_np)
-
+            pose_output_tensor[i] = torch.from_numpy(resized_pose_np.astype(np.float32) / 255.0)
             pbar.step()
-
         pbar.finish()
             
         if provider_type == "GPU":
             dwpose_detector.reset_engines()
 
-        return results_list, all_keypoints_data
+        return all_keypoints_data
+
+
+    def validate_and_prepare_frame(self, frame, height, width):
+        if frame is None or not isinstance(frame, np.ndarray):
+            return np.zeros((height, width, 3), dtype=np.uint8)
+        if frame.ndim == 2: frame = np.stack((frame,) * 3, axis=-1)
+        if frame.shape[2] == 4: frame = frame[:, :, :3]
+        if frame.shape[2] == 1: frame = np.repeat(frame, 3, axis=2)
+        if frame.ndim != 3 or frame.shape[2] != 3:
+            return np.zeros((height, width, 3), dtype=np.uint8)
+        return frame.astype(np.uint8)
 
 
     def get_face_cropping_metadata(self, all_keypoints_data, face_padding):
@@ -386,15 +402,54 @@ class DWposeDeluxeNode(DWposeNodeBase):
         return faces_by_frame, master_size, max_faces_per_frame
 
 
+    def generate_blend_tensors_cpu(self, image_tensor, pose_output_tensor):
+        batch_size, height, width, _ = image_tensor.shape
+        logger.info(f"Generating blend images using CPU")
+        pbar = progress(batch_size, label="Blend")
+
+        blended_output_frames = np.zeros((batch_size, height, width, 3), dtype=np.uint8)
+        source_output_frames = np.zeros((batch_size, height, width, 3), dtype=np.uint8)
+
+        for i in range(batch_size):
+            source_np = (image_tensor[i].cpu().numpy() * 255).astype(np.uint8)
+            resized_pose_np = (pose_output_tensor[i].cpu().numpy() * 255).astype(np.uint8)
+
+            blended_np = cv2.addWeighted(source_np, 0.5, resized_pose_np, 0.5, 0)
+            
+            blended_output_frames[i] = blended_np
+            source_output_frames[i] = source_np
+            pbar.step()
+        pbar.finish()
+        return torch.from_numpy(blended_output_frames.astype(np.float32) / 255.0)
+
+
+    def generate_blend_tensors_gpu(self, image_tensor, pose_output_tensor):
+        batch_size, height, width, _ = image_tensor.shape
+        logger.info(f"Generating blend images using GPU")
+        pbar = progress(batch_size, label="Blend")
+
+        blended_output_tensor = torch.zeros(image_tensor.shape, dtype=torch.float32, device='cpu')
+
+        for i in range(batch_size):
+            source_tensor_slice = image_tensor[i].to(pose_output_tensor.device)
+            resized_pose_tensor = pose_output_tensor[i]
+
+            blended_slice = source_tensor_slice * 0.5 + resized_pose_tensor * 0.5
+            
+            blended_output_tensor[i] = blended_slice.cpu()
+            pbar.step()
+        pbar.finish()
+        return blended_output_tensor
+
+
     def generate_face_atlas_cpu(self, image_tensor, all_keypoints_data, face_padding, height, width):
         faces_by_frame, master_size, max_faces_per_frame = self.get_face_cropping_metadata(all_keypoints_data, face_padding)
         if master_size == 0:
             return torch.zeros((image_tensor.shape[0], 1, 1, 3), dtype=torch.float32)
 
         batch_size = image_tensor.shape[0]
-        logger.info(f"Cropping faces from {batch_size} frames with padding={face_padding} using CPU.")
-
-        pbar = progress(batch_size, label="Frame")
+        logger.info(f"Cropping faces using CPU for resize.")
+        pbar = progress(batch_size, label="Face")
 
         final_atlas_width = master_size * max_faces_per_frame
         final_atlas_np = np.zeros((batch_size, master_size, final_atlas_width, 3), dtype=np.uint8)
@@ -435,9 +490,7 @@ class DWposeDeluxeNode(DWposeNodeBase):
                     start_x = face_idx * master_size
                     end_x = start_x + master_size
                     final_atlas_np[i, :, start_x:end_x, :] = scaled_crop
-
             pbar.step()
-            
         pbar.finish()
         return torch.from_numpy(final_atlas_np.astype(np.float32) / 255.0)
 
@@ -445,16 +498,17 @@ class DWposeDeluxeNode(DWposeNodeBase):
     def generate_face_atlas_gpu(self, image_tensor, all_keypoints_data, face_padding, height, width):
         faces_by_frame, master_size, max_faces_per_frame = self.get_face_cropping_metadata(all_keypoints_data, face_padding)
         if master_size == 0:
-            return torch.zeros((image_tensor.shape[0], 1, 1, 3), device=image_tensor.device, dtype=torch.float32)
+            return torch.zeros((image_tensor.shape[0], 1, 1, 3), device='cpu', dtype=torch.float32)
 
         batch_size = image_tensor.shape[0]
-        logger.info(f"Cropping faces from {batch_size} frames with padding={face_padding} using GPU.")
-
-        pbar = progress(batch_size, label="Frame")
+        logger.info(f"Cropping faces using GPU for resize.")
+        pbar = progress(batch_size, label="Face")
 
         final_atlas_width = master_size * max_faces_per_frame
-        final_atlas_tensor = torch.zeros((batch_size, master_size, final_atlas_width, 3), device=image_tensor.device, dtype=image_tensor.dtype)
+        final_atlas_tensor = torch.zeros((batch_size, master_size, final_atlas_width, 3), device='cpu', dtype=image_tensor.dtype)
         
+        process_device = torch.device("cuda")
+
         for i in range(image_tensor.shape[0]):
             current_frame_faces = faces_by_frame.get(i, [])
             for face_idx, detail in enumerate(current_frame_faces):
@@ -474,124 +528,41 @@ class DWposeDeluxeNode(DWposeNodeBase):
                 source_crop_tensor = image_tensor[i, src_y1_clip:src_y2_clip, src_x1_clip:src_x2_clip, :]
 
                 if source_crop_tensor.numel() > 0:
-                    padded_crop = torch.zeros((square_dim, square_dim, 3), device=image_tensor.device, dtype=image_tensor.dtype)
+                    padded_crop = torch.zeros((square_dim, square_dim, 3), device='cpu', dtype=image_tensor.dtype)
                     pad_top = src_y1_clip - src_y1
                     pad_left = src_x1_clip - src_x1
                     padded_crop[pad_top:pad_top+source_crop_tensor.shape[0], pad_left:pad_left+source_crop_tensor.shape[1], :] = source_crop_tensor
 
-                    resize_input = padded_crop.permute(2, 0, 1).unsqueeze(0)
+                    resize_input = padded_crop.permute(2, 0, 1).unsqueeze(0).to(process_device)
                     scaled_crop_tensor = torch.nn.functional.interpolate(resize_input, size=(master_size, master_size), mode='area')
-                    final_crop = scaled_crop_tensor.squeeze(0).permute(1, 2, 0)
+                    
+                    final_crop = scaled_crop_tensor.squeeze(0).permute(1, 2, 0).cpu()
                     
                     start_x = face_idx * master_size
                     end_x = start_x + master_size
                     final_atlas_tensor[i, :, start_x:end_x, :] = final_crop
-
             pbar.step()
-
         pbar.finish()
         return final_atlas_tensor
 
 
-    def validate_and_prepare_frame(self, frame, height, width):
-        if frame is None or not isinstance(frame, np.ndarray):
-            return np.zeros((height, width, 3), dtype=np.uint8)
-        if frame.ndim == 2: frame = np.stack((frame,) * 3, axis=-1)
-        if frame.shape[2] == 4: frame = frame[:, :, :3]
-        if frame.shape[2] == 1: frame = np.repeat(frame, 3, axis=2)
-        if frame.ndim != 3 or frame.shape[2] != 3:
-            return np.zeros((height, width, 3), dtype=np.uint8)
-        return frame.astype(np.uint8)
-
-
-    def generate_pose_and_blend_tensors_gpu(self, image_tensor, results_list):
-        batch_size, height, width, _ = image_tensor.shape
-
-        logger.info(f"Generating pose and blend image_tensors using GPU")
-
-        pbar = progress(batch_size, label="Frame")
-
-        device = image_tensor.device
-        dtype = image_tensor.dtype
-
-        pose_output_tensor = torch.zeros_like(image_tensor)
-        blended_output_tensor = torch.zeros_like(image_tensor)
-        
-        for i in range(batch_size):
-            pose_np = self.validate_and_prepare_frame(results_list[i], height, width)
-            pose_tensor = torch.from_numpy(pose_np.astype(np.float32) / 255.0).to(device, dtype=dtype)
-            
-            source_tensor_slice = image_tensor[i]
-
-            if pose_tensor.shape[0] != height or pose_tensor.shape[1] != width:
-                pose_tensor_nchw = pose_tensor.unsqueeze(0).permute(0, 3, 1, 2)
-                resized_pose_nchw = torch.nn.functional.interpolate(pose_tensor_nchw, size=(height, width), mode='area')
-                resized_pose_tensor = resized_pose_nchw.permute(0, 2, 3, 1).squeeze(0)
-            else:
-                resized_pose_tensor = pose_tensor
-
-            blended_slice = source_tensor_slice * 0.5 + resized_pose_tensor * 0.5
-            pose_output_tensor[i] = resized_pose_tensor
-            blended_output_tensor[i] = blended_slice
-
-            pbar.step()
-
-        pbar.finish()
-        return pose_output_tensor, blended_output_tensor, image_tensor
-
-
-    def generate_pose_and_blend_tensors_cpu(self, image_tensor, results_list):
-        batch_size, height, width, _ = image_tensor.shape
-
-        logger.info(f"Generating pose and blend image_tensors using CPU")
-
-        pbar = progress(batch_size, label="Frame")
-
-        pose_output_frames = np.zeros((batch_size, height, width, 3), dtype=np.uint8)
-        blended_output_frames = np.zeros((batch_size, height, width, 3), dtype=np.uint8)
-        source_output_frames = np.zeros((batch_size, height, width, 3), dtype=np.uint8)
-
-        for i in range(batch_size):
-            source_np = (image_tensor[i].cpu().numpy() * 255).astype(np.uint8)
-            pose_np = self.validate_and_prepare_frame(results_list[i], height, width)
-
-            if pose_np.shape[0] != height or pose_np.shape[1] != width:
-                resized_pose_np = cv2.resize(pose_np, (width, height), interpolation=cv2.INTER_AREA)
-            else:
-                resized_pose_np = pose_np
-
-            blended_np = cv2.addWeighted(source_np, 0.5, resized_pose_np, 0.5, 0)
-            
-            pose_output_frames[i] = resized_pose_np
-            blended_output_frames[i] = blended_np
-            source_output_frames[i] = source_np
-
-            pbar.step()
-
-        pbar.finish()
-
-        pose_output_tensor = torch.from_numpy(pose_output_frames.astype(np.float32) / 255.0)
-        blended_output_tensor = torch.from_numpy(blended_output_frames.astype(np.float32) / 255.0)
-        source_output_tensor = torch.from_numpy(source_output_frames.astype(np.float32) / 255.0)
-
-        return pose_output_tensor, blended_output_tensor, source_output_tensor
-
-
-    def generate_outputs(self, image, results_list, all_keypoints_data, show_face, crop_face, height, width, save_keypoints, audio, fps_to_output, built_new_model, face_padding, provider_type):
-        
-        if crop_face:
-            if provider_type == "GPU":
-                face_atlas_tensor = self.generate_face_atlas_gpu(image, all_keypoints_data, face_padding, height, width)
-            else: # CPU
-                face_atlas_tensor = self.generate_face_atlas_cpu(image, all_keypoints_data, face_padding, height, width)
-        else:
-            face_atlas_tensor = torch.zeros((image.shape[0], 1, 1, 3), dtype=torch.float32)
+    def generate_outputs(self, image, pose_output_tensor, all_keypoints_data, show_face, crop_face, height, width, save_keypoints, audio, fps_to_output, built_new_model, face_padding, provider_type, make_blend):
+        blended_output_tensor = torch.zeros((image.shape[0], 1, 1, 3), dtype=torch.float32)
+        face_atlas_tensor = torch.zeros((image.shape[0], 1, 1, 3), dtype=torch.float32)
 
         if provider_type == "GPU":
-            pose_output_tensor, blended_output_tensor, source_output_tensor = self.generate_pose_and_blend_tensors_gpu(image, results_list)
-        else: # CPU
-            pose_output_tensor, blended_output_tensor, source_output_tensor = self.generate_pose_and_blend_tensors_cpu(image, results_list)
+            if make_blend:
+                blended_output_tensor = self.generate_blend_tensors_gpu(image, pose_output_tensor)
+            if crop_face:
+                face_atlas_tensor = self.generate_face_atlas_gpu(image, all_keypoints_data, face_padding, height, width)
 
+        else: # CPU
+            if make_blend:
+                blended_output_tensor = self.generate_blend_tensors_cpu(image, pose_output_tensor)
+            if crop_face:
+                face_atlas_tensor = self.generate_face_atlas_cpu(image, all_keypoints_data, face_padding, height, width)
+        
+        source_output_tensor = image
         keypoints_json_string = json.dumps(all_keypoints_data)
 
         if save_keypoints:
@@ -617,7 +588,7 @@ class DWposeDeluxeNode(DWposeNodeBase):
                       frame_count: int = 0, audio: torch.Tensor = None, video_info: str = "",
                       precision: str = "fp32",
                       detector_model: str = "None", estimator_model: str = "None",
-                      show_body: bool = True, show_face: bool = True, show_hands: bool = True, show_feet: bool = True, crop_face: bool = False, save_keypoints: bool = False,
+                      show_body: bool = True, show_face: bool = True, show_hands: bool = True, show_feet: bool = True, make_blend: bool = False, crop_face: bool = False, save_keypoints: bool = False,
                       poses_to_detect: int = 1,
                       custom_options: dict = None, **kwargs):
 
@@ -676,16 +647,27 @@ class DWposeDeluxeNode(DWposeNodeBase):
         face_threshold = actual_options["face_threshold"]
         hand_threshold = actual_options["hand_threshold"]
         face_padding = actual_options["face_padding"]
+        mem_log_enabled = actual_options.get("memory_debug_log", False)
+
+        batch_size = image.shape[0]
+        height, width = image.shape[1], image.shape[2]
+
+        if mem_log_enabled:
+            output_dir = folder_paths.get_output_directory()
+            progress.setup(True, output_dir, provider_type, batch_size, height, width, poses_to_detect)
+        else:
+            progress.setup(False)
 
         dwpose_detector, built_new_model = self.initialize_dwpose_detector(provider_type, precision, detector_model, estimator_model)
         if provider_type == "GPU":
             dwpose_detector.activate_engines()
+        
+        pose_output_tensor = torch.zeros(image.shape, dtype=torch.float32, device='cpu')
 
-        batch_size = image.shape[0]
-        height, width = image.shape[1], image.shape[2]
-        results_list, all_keypoints_data = self.process_frames(
+        all_keypoints_data = self.process_frames(
             dwpose_detector=dwpose_detector,
             image=image,
+            pose_output_tensor=pose_output_tensor,
             batch_size=batch_size,
             height=height,
             width=width,
@@ -700,9 +682,19 @@ class DWposeDeluxeNode(DWposeNodeBase):
             precision=precision
         )
 
+        if provider_type == "GPU" and make_blend:
+             try:
+                 pose_output_tensor_gpu = pose_output_tensor.to("cuda")
+                 del pose_output_tensor
+                 pose_output_tensor = pose_output_tensor_gpu
+                 gc.collect()
+                 torch.cuda.empty_cache()
+             except Exception as e:
+                 logger.warning(f"Failed to move pose tensor to GPU: {e}")
+
         outputs = self.generate_outputs(
             image=image,
-            results_list=results_list,
+            pose_output_tensor=pose_output_tensor,
             all_keypoints_data=all_keypoints_data,
             show_face=show_face,
             crop_face=crop_face,
@@ -713,8 +705,11 @@ class DWposeDeluxeNode(DWposeNodeBase):
             fps_to_output=fps_to_output,
             built_new_model=built_new_model,
             face_padding=actual_options["face_padding"],
-            provider_type=provider_type
+            provider_type=provider_type,
+            make_blend=make_blend
         )
+        
+        progress.finalize()
         return outputs
 
 

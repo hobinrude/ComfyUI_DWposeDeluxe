@@ -248,4 +248,54 @@ add_node_config("PoseResize", NodeConfig(
     """
 ))
 
+add_node_config("KeypointRangeFromBatch", NodeConfig(
+    short_description="Extracts a subset of keypoint frames.",
+    long_description="""
+**Function:** Extracts a range of frames from a keypoint batch.
 
+### Inputs
+- **pose_keypoints:** The keypoint sequence to process.
+
+### Parameters
+- **start_frame:** The starting frame index (0-based).
+- **frame_count:** The number of frames to extract.
+
+### Outputs
+- **pose_keypoints:** The extracted subset of keypoints.
+    """
+))
+
+add_node_config("BatchKeypoints", NodeConfig(
+    short_description="Concatenates two keypoint batches.",
+    long_description="""
+**Function:** Appends frames from the second keypoint batch to the end of the first one.
+
+### Inputs
+- **keypoints_1:** The first keypoint batch.
+- **keypoints_2:** The second keypoint batch (appended to first).
+
+### Outputs
+- **pose_keypoints:** The combined keypoint sequence.
+
+### Notes
+- Both batches should have the same canvas dimensions.
+    """
+))
+
+add_node_config("MergeKeypoints", NodeConfig(
+    short_description="Merges people from two keypoint batches into single frames.",
+    long_description="""
+**Function:** Combines pose detections from two inputs into a single canvas for each frame.
+
+### Inputs
+- **keypoints_1:** The first keypoint dataset.
+- **keypoints_2:** The second keypoint dataset (merged into first).
+
+### Outputs
+- **pose_keypoints:** The merged keypoint data containing people from both inputs.
+
+### Notes
+- Inputs must have the same canvas size and same number of frames.
+- Coordinate format (absolute/normalized) will be matched to keypoints_1.
+    """
+))

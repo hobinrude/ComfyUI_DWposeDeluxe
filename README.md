@@ -13,7 +13,7 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
   - Automatically downloads the required ONNX models on first use.
   - Automatically builds and caches optimized TensorRT engines when the GPU provider is selected for the first time.
 
-- **Modular Workflow**: Comes with 7 distinct nodes for a flexible and powerful workflow:
+- **Modular Workflow**: Comes with 11 distinct nodes for a flexible and powerful workflow:
   
   - `DWposeDeluxeNode`: The core node for performing pose estimation.
   - `DWposeDeluxe Weight Options`: Fine-tune the visual style of the rendered pose skeleton, such as dot size and line thickness.
@@ -22,6 +22,10 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
   - `DWposeDeluxe Pose Printer`: Renders raw keypoints to pose image/video.
   - `DWposeDeluxe Interpolation`: Smooth transition between poses. Match pose to first frame of SteadyDancer or create looped pose driven videos.
   - `DWposeDeluxe Keypoint Loader`: (Up) loads saved JSON pose datasets.
+  - `DWposeDeluxe Keypoint Resize`: Lossless scaling, cropping and padding of keypoint data.
+  - `DWposeDeluxe Keypoint Range From Batch`: Select frame range from batch.
+  - `DWposeDeluxe Merge Keypoints`: Adds 2 sets of keypoints onto one canvas.
+  - `DWposeDeluxe Batch Keypoints`: Adds frames from one set of keypoints to the end of another.
 
 - **Rich I/O**:
   
@@ -61,6 +65,9 @@ or install manually:
    
    ```bash
    cd ComfyUI/custom_nodes/
+   ```
+   
+   ```bash
    git clone https://github.com/hobinrude/ComfyUI_DWposeDeluxe
    ```
 
@@ -131,21 +138,28 @@ To use without GPU support a CPU version of `onnxruntime` is needed instead of `
 
 ## Changelog
 
-- 2025-12-09
+- 2025-12-16 v1.0.7
 
-  - Resolved issues with manager install
+  - Added 3 new keypoint editing nodes
+  - Optimized memory load of main output creation method
+  - Added description of each nodes function, inputs, parameters and outputs
+  - Fixed install directory name
 
-- 2025-12-04
+- 2025-12-09 v1.0.6
+
+  - Resolved issues with manager install (hopefully all)
+
+- 2025-12-04 v1.0.5
 
   - Added PosePrinter and Interpolation nodes
 
-- 2025-12-02
+- 2025-12-02 v1.0.4
   
   - Added `face_image` crop from source by bbox
   - Fixed normalized and pretty JSON output of Converter node
   - Added visibility thresholds by detection confidence per keypoint in subset 
 
-- 2025-11-26
+- 2025-11-26 v1.0.3
   
   - Major UI and inference bugfixes
   - Improved console logging
@@ -153,9 +167,7 @@ To use without GPU support a CPU version of `onnxruntime` is needed instead of `
 
 ## Known issues
 
-- Manager might give problems with installing correct TensorRT version. Install it manually if it fails on first run.
 - UI is not optimized for Nodes 2.0
-- Thresholds need to be looked at
 
 This node pack is still under development, so reporting any `Issues` is much apperciated.
 Same goes for additional feature requests, which are more than welcome in `Issues` section.

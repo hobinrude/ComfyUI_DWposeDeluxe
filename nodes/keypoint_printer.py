@@ -11,22 +11,24 @@ from ..dwpose import util as dwpose_util
 from .custom_options import DWOPOSE_CUSTOM_OPTIONS_TYPE
 from ..node_configs import DWposeNodeBase
 
+
 def detect_coordinate_format(data):
     for item in data:
         for person in item.get("people", []):
             pts = person.get("pose_keypoints_2d", [])
             if pts:
-                # Check a few keypoints to see if they are > 1.0
                 for i in range(0, min(len(pts), 15), 3):
                     if abs(pts[i]) > 1.0 or abs(pts[i + 1]) > 1.0:
                         return "absolute"
     return "normalized"
+
 
 class KeypointPrinter(DWposeNodeBase):
     RETURN_TYPES = ("IMAGE", "STRING")
     RETURN_NAMES = ("pose_image", "input_keypoint_info")
     FUNCTION = "execute"
     CATEGORY = "DWposeDeluxe"
+
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -43,6 +45,7 @@ class KeypointPrinter(DWposeNodeBase):
                 "show_hands": ("BOOLEAN", {"default": True}),
             }
         }
+
 
     def execute(self, keypoints, poses_to_print, show_body, show_feet, show_face, show_hands, custom_options=None):
         if not keypoints or not isinstance(keypoints, list):
@@ -140,7 +143,6 @@ class KeypointPrinter(DWposeNodeBase):
             except Exception as e:
                 pose_info = f"Error generating pose info: {e}"
 
-        # Make a deep copy to avoid modifying the original input
         keypoints = copy.deepcopy(keypoints)
 
         input_format = detect_coordinate_format(keypoints)
@@ -196,7 +198,6 @@ class KeypointPrinter(DWposeNodeBase):
             if poses_to_print != -1:
                 people_to_process = people_to_process[:poses_to_print]
 
-            # Data Transformation
             current_candidate = []
             current_subset = []
             all_hand_peaks = []
@@ -206,7 +207,7 @@ class KeypointPrinter(DWposeNodeBase):
             for person in people_to_process:
                 if show_body:
                     pose_kpts_2d = np.array(person.get('pose_keypoints_2d', [])).reshape(-1, 3)
-                    person_subset_row = [-1] * 25 # DWpose uses up to 25 keypoints for body/feet
+                    person_subset_row = [-1] * 25
                     
                     for kpt_idx, (x, y, conf) in enumerate(pose_kpts_2d):
                         if kpt_idx < 25 and conf > 0:
@@ -232,7 +233,6 @@ class KeypointPrinter(DWposeNodeBase):
                     if normalized_face_kpts:
                         all_lmks.append(normalized_face_kpts)
 
-            # Rendering
             if show_body and current_candidate and current_subset:
                 canvas_np = dwpose_util.draw_bodypose(canvas_np, np.array(current_candidate), np.array(current_subset), show_feet, actual_options)
             

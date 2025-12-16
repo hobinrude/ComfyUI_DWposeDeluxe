@@ -1,4 +1,4 @@
-# ComfyUI_DWposeDeluxe/nodes/frame_number.py
+# ComfyUI_DWposeDeluxe/nodes/frame_numbers.py
 
 from ..node_configs import DWposeNodeBase
 import torch

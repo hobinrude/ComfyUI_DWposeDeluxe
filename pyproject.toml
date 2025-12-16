@@ -1,7 +1,7 @@
 [project]
-name = "dwposedeluxe"
-description = "A custom ComfyUI node integrating DW-Pose (Denoising Whole-Body Pose Estimation) for high-quality pose detection with CPU (ONNX) and GPU (TensorRT) support. Features 20x faster performance with TensorRT acceleration, automatic model downloading, customizable pose visualization, keypoint conversion, and video workflow integration."
-version = "1.0.6"
+name = "ComfyUI_DWposeDeluxe"
+description = "Node pack integrating DW-Pose for pose detection with both CPU (ONNX) and GPU (TensorRT) support. Features 20x faster performance with TensorRT acceleration, automatic model downloading and building TRT engines, optional feet detection, customizable pose visualization, keypoint conversion, video workflow integration and nodes for editing raw keypoint data."
+version = "1.0.7"
 license = {file = "LICENSE"} 
 
 # classifiers = [

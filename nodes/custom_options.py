@@ -29,6 +29,7 @@ class CustomOptions(DWposeNodeBase):
                 "neck_validity": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "nms_threshold": ("FLOAT", {"default": 0.45, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "score_threshold": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "memory_debug_log": ("BOOLEAN", {"default": False}),
             }
         }
 
