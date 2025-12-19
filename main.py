@@ -323,7 +323,6 @@ class DWposeDeluxeNode(DWposeNodeBase):
                     show_feet=show_feet,
                     _calculate_face=face_data_needed,
                     poses_to_detect=poses_to_detect,
-                    pose_opacity=pose_opacity,
                     **actual_options
                 )
 
