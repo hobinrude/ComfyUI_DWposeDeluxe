@@ -1,7 +1,7 @@
 [project]
 name = "dwposedeluxe"
 description = "Node pack integrating DW-Pose for pose detection with both CPU (ONNX) and GPU (TensorRT) support. Features 20x faster performance with TensorRT acceleration, automatic model downloading and building TRT engines, optional feet detection, customizable pose visualization, keypoint conversion, video workflow integration and nodes for editing raw keypoint data."
-version = "1.0.10"
+version = "1.0.11"
 license = {file = "LICENSE"} 
 
 # classifiers = [

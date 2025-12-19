@@ -189,8 +189,7 @@ class KeypointConverter(DWposeNodeBase):
 
         if reset_confidence:
             data = UnifiedKeypointHandler.reset_confidence(data, confidence_threshold)
-            
-data = remove_empty_keypoints(data)
+        data = remove_empty_keypoints(data)
 
         final_width = None
         final_height = None
