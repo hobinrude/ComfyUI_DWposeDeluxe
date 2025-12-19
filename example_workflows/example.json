@@ -1,15 +1,15 @@
 {
   "id": "00000000-0000-0000-0000-000000000000",
   "revision": 0,
-  "last_node_id": 20,
-  "last_link_id": 44,
+  "last_node_id": 23,
+  "last_link_id": 58,
   "nodes": [
     {
       "id": 18,
       "type": "ImageResizeKJv2",
       "pos": [
         1120,
-        1000
+        1070
       ],
       "size": [
         250,
@@ -24,7 +24,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 36
+          "link": 53
         },
         {
           "name": "mask",
@@ -70,8 +70,7 @@
         "0, 0, 0",
         "center",
         2,
-        "cpu",
-        "<tr><td>Output: </td><td><b>96</b> x <b>720</b> x <b>360 | 284.77MB</b></td></tr>"
+        "cpu"
       ],
       "color": "#222",
       "bgcolor": "#000"
@@ -81,7 +80,7 @@
       "type": "ImageConcatMulti",
       "pos": [
         1120,
-        930
+        1000
       ],
       "size": [
         250,
@@ -138,7 +137,7 @@
       "type": "ImageResizeKJv2",
       "pos": [
         1120,
-        770
+        840
       ],
       "size": [
         250,
@@ -153,7 +152,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 42
+          "link": 58
         },
         {
           "name": "mask",
@@ -199,80 +198,7 @@
         "0, 0, 0",
         "center",
         2,
-        "cpu",
-        "<tr><td>Output: </td><td><b>96</b> x <b>240</b> x <b>256 | 67.50MB</b></td></tr>"
-      ],
-      "color": "#222",
-      "bgcolor": "#000"
-    },
-    {
-      "id": 15,
-      "type": "ImageResizeKJv2",
-      "pos": [
-        1120,
-        690
-      ],
-      "size": [
-        250,
-        286
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 30
-        },
-        {
-          "name": "mask",
-          "shape": 7,
-          "type": "MASK",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            33
-          ]
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-kjnodes",
-        "ver": "c661baadd9683c0033cd2a6ad90157c6d099a6c2",
-        "Node name for S&R": "ImageResizeKJv2"
-      },
-      "widgets_values": [
-        240,
-        256,
-        "nearest-exact",
-        "stretch",
-        "0, 0, 0",
-        "center",
-        2,
-        "cpu",
-        "<tr><td>Output: </td><td><b>96</b> x <b>240</b> x <b>256 | 67.50MB</b></td></tr>"
+        "cpu"
       ],
       "color": "#222",
       "bgcolor": "#000"
@@ -282,7 +208,7 @@
       "type": "ImageResizeKJv2",
       "pos": [
         1120,
-        850
+        920
       ],
       "size": [
         250,
@@ -297,7 +223,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 32
+          "link": 51
         },
         {
           "name": "mask",
@@ -343,8 +269,7 @@
         "0, 0, 0",
         "center",
         2,
-        "cpu",
-        "<tr><td>Output: </td><td><b>96</b> x <b>240</b> x <b>256 | 67.50MB</b></td></tr>"
+        "cpu"
       ],
       "color": "#222",
       "bgcolor": "#000"
@@ -354,7 +279,7 @@
       "type": "PlaySound|pysssss",
       "pos": [
         1120,
-        610
+        680
       ],
       "size": [
         260,
@@ -400,7 +325,7 @@
       "type": "ImageConcatMulti",
       "pos": [
         1120,
-        1070
+        1140
       ],
       "size": [
         250,
@@ -447,169 +372,6 @@
       "bgcolor": "#000"
     },
     {
-      "id": 4,
-      "type": "DWposeDeluxeNode",
-      "pos": [
-        710,
-        380
-      ],
-      "size": [
-        284.5865234375,
-        466
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1
-        },
-        {
-          "name": "frame_count",
-          "shape": 7,
-          "type": "INT",
-          "link": 2
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 3
-        },
-        {
-          "name": "video_info",
-          "shape": 7,
-          "type": "VHS_VIDEOINFO",
-          "link": 4
-        },
-        {
-          "name": "weight_options",
-          "shape": 7,
-          "type": "DWOPOSE_OPTIONS",
-          "link": 7
-        }
-      ],
-      "outputs": [
-        {
-          "name": "pose_image",
-          "type": "IMAGE",
-          "links": [
-            32
-          ]
-        },
-        {
-          "name": "blend_image",
-          "type": "IMAGE",
-          "links": [
-            40
-          ]
-        },
-        {
-          "name": "face_image",
-          "type": "IMAGE",
-          "links": [
-            36
-          ]
-        },
-        {
-          "name": "source_image",
-          "type": "IMAGE",
-          "links": [
-            30
-          ]
-        },
-        {
-          "name": "audio",
-          "type": "AUDIO",
-          "links": [
-            22
-          ]
-        },
-        {
-          "name": "frame_rate",
-          "type": "FLOAT",
-          "links": [
-            9
-          ]
-        },
-        {
-          "name": "keypoints",
-          "type": "POSE_KEYPOINT",
-          "links": []
-        }
-      ],
-      "properties": {
-        "aux_id": "hobinrude/ComfyUI_DWposeDeluxe",
-        "ver": "4cef9e52b82ce16f460b31a742196976e62e6de2",
-        "Node name for S&R": "DWposeDeluxeNode"
-      },
-      "widgets_values": [
-        2,
-        0.25,
-        true,
-        true,
-        0.3,
-        true,
-        0.1,
-        true,
-        0.1,
-        "CPU",
-        "fp32",
-        "yolox_l.onnx",
-        "dw-ll_ucoco_384.onnx",
-        false
-      ],
-      "color": "#144678",
-      "bgcolor": "#003264"
-    },
-    {
-      "id": 20,
-      "type": "FrameNumberNode",
-      "pos": [
-        1070,
-        380
-      ],
-      "size": [
-        260,
-        154
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 40
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            42
-          ]
-        }
-      ],
-      "properties": {
-        "aux_id": "hobinrude/ComfyUI_DWposeDeluxe",
-        "ver": "4cef9e52b82ce16f460b31a742196976e62e6de2",
-        "Node name for S&R": "FrameNumberNode"
-      },
-      "widgets_values": [
-        true,
-        "bottom-right",
-        64,
-        "NotoSansMono-Bold.ttf",
-        0.8
-      ],
-      "color": "#144678",
-      "bgcolor": "#003264"
-    },
-    {
       "id": 5,
       "type": "VHS_LoadVideo",
       "pos": [
@@ -618,7 +380,7 @@
       ],
       "size": [
         242.6444549560547,
-        561.1538688745392
+        310
       ],
       "flags": {},
       "order": 0,
@@ -642,28 +404,28 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            1
+            46
           ]
         },
         {
           "name": "frame_count",
           "type": "INT",
           "links": [
-            2
+            47
           ]
         },
         {
           "name": "audio",
           "type": "AUDIO",
           "links": [
-            3
+            48
           ]
         },
         {
           "name": "video_info",
           "type": "VHS_VIDEOINFO",
           "links": [
-            4
+            49
           ]
         }
       ],
@@ -710,7 +472,7 @@
       ],
       "size": [
         420,
-        690.2222222222222
+        334
       ],
       "flags": {},
       "order": 11,
@@ -725,7 +487,7 @@
           "name": "audio",
           "shape": 7,
           "type": "AUDIO",
-          "link": 22
+          "link": 55
         },
         {
           "name": "meta_batch",
@@ -745,7 +507,7 @@
           "widget": {
             "name": "frame_rate"
           },
-          "link": 9
+          "link": 56
         }
       ],
       "outputs": [
@@ -789,15 +551,15 @@
       "bgcolor": "#000"
     },
     {
-      "id": 7,
-      "type": "WeightOptions",
+      "id": 21,
+      "type": "CustomOptions",
       "pos": [
         710,
-        920
+        870
       ],
       "size": [
         280,
-        154
+        394
       ],
       "flags": {},
       "order": 1,
@@ -805,102 +567,268 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "options",
-          "type": "DWOPOSE_OPTIONS",
+          "name": "custom_options",
+          "type": "DWOPOSE_CUSTOM_OPTIONS",
           "links": [
-            7
+            50
           ]
         }
       ],
       "properties": {
-        "aux_id": "hobinrude/ComfyUI_DWposeDeluxe",
-        "ver": "4cef9e52b82ce16f460b31a742196976e62e6de2",
-        "Node name for S&R": "WeightOptions"
+        "Node name for S&R": "CustomOptions"
       },
       "widgets_values": [
         0,
         0,
-        -2,
         0,
-        -1
+        0,
+        0,
+        0.25,
+        0.3,
+        0.1,
+        0.1,
+        0.6,
+        0,
+        0.3,
+        0.45,
+        0.1,
+        false
       ],
-      "color": "#144678",
+      "color": "#134679",
       "bgcolor": "#003264"
+    },
+    {
+      "id": 22,
+      "type": "DWposeDeluxeNode",
+      "pos": [
+        710,
+        380
+      ],
+      "size": [
+        280,
+        418
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 46
+        },
+        {
+          "name": "frame_count",
+          "shape": 7,
+          "type": "INT",
+          "link": 47
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 48
+        },
+        {
+          "name": "video_info",
+          "shape": 7,
+          "type": "VHS_VIDEOINFO",
+          "link": 49
+        },
+        {
+          "name": "custom_options",
+          "shape": 7,
+          "type": "DWOPOSE_CUSTOM_OPTIONS",
+          "link": 50
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_image",
+          "type": "IMAGE",
+          "links": [
+            51
+          ]
+        },
+        {
+          "name": "blend_image",
+          "type": "IMAGE",
+          "links": [
+            57
+          ]
+        },
+        {
+          "name": "face_image",
+          "type": "IMAGE",
+          "links": [
+            53
+          ]
+        },
+        {
+          "name": "source_image",
+          "type": "IMAGE",
+          "links": [
+            54
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            55
+          ]
+        },
+        {
+          "name": "frame_rate",
+          "type": "FLOAT",
+          "links": [
+            56
+          ]
+        },
+        {
+          "name": "keypoints",
+          "type": "POSE_KEYPOINT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DWposeDeluxeNode"
+      },
+      "widgets_values": [
+        1,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        "CPU",
+        "fp32",
+        "yolox_l.onnx",
+        "dw-ll_ucoco_384.onnx",
+        false
+      ],
+      "color": "#134679",
+      "bgcolor": "#003264"
+    },
+    {
+      "id": 23,
+      "type": "FrameNumberNode",
+      "pos": [
+        1070,
+        380
+      ],
+      "size": [
+        280,
+        202
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 57
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            58
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FrameNumberNode"
+      },
+      "widgets_values": [
+        true,
+        0,
+        1,
+        "top-left",
+        64,
+        "DejaVuSansMono-Bold.ttf",
+        0.5
+      ],
+      "color": "#134679",
+      "bgcolor": "#003264"
+    },
+    {
+      "id": 15,
+      "type": "ImageResizeKJv2",
+      "pos": [
+        1120,
+        760
+      ],
+      "size": [
+        250,
+        286
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 54
+        },
+        {
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            33
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "c661baadd9683c0033cd2a6ad90157c6d099a6c2",
+        "Node name for S&R": "ImageResizeKJv2"
+      },
+      "widgets_values": [
+        240,
+        256,
+        "nearest-exact",
+        "stretch",
+        "0, 0, 0",
+        "center",
+        2,
+        "cpu"
+      ],
+      "color": "#222",
+      "bgcolor": "#000"
     }
   ],
   "links": [
-    [
-      1,
-      5,
-      0,
-      4,
-      0,
-      "IMAGE"
-    ],
-    [
-      2,
-      5,
-      1,
-      4,
-      1,
-      "INT"
-    ],
-    [
-      3,
-      5,
-      2,
-      4,
-      2,
-      "AUDIO"
-    ],
-    [
-      4,
-      5,
-      3,
-      4,
-      3,
-      "VHS_VIDEOINFO"
-    ],
-    [
-      7,
-      7,
-      0,
-      4,
-      4,
-      "DWOPOSE_OPTIONS"
-    ],
-    [
-      9,
-      4,
-      5,
-      9,
-      4,
-      "FLOAT"
-    ],
-    [
-      22,
-      4,
-      4,
-      9,
-      1,
-      "AUDIO"
-    ],
-    [
-      30,
-      4,
-      3,
-      15,
-      0,
-      "IMAGE"
-    ],
-    [
-      32,
-      4,
-      0,
-      17,
-      0,
-      "IMAGE"
-    ],
     [
       33,
       15,
@@ -926,14 +854,6 @@
       "IMAGE"
     ],
     [
-      36,
-      4,
-      2,
-      18,
-      0,
-      "IMAGE"
-    ],
-    [
       37,
       14,
       0,
@@ -947,22 +867,6 @@
       0,
       19,
       1,
-      "IMAGE"
-    ],
-    [
-      40,
-      4,
-      1,
-      20,
-      0,
-      "IMAGE"
-    ],
-    [
-      42,
-      20,
-      0,
-      16,
-      0,
       "IMAGE"
     ],
     [
@@ -980,19 +884,115 @@
       11,
       0,
       "*"
+    ],
+    [
+      46,
+      5,
+      0,
+      22,
+      0,
+      "IMAGE"
+    ],
+    [
+      47,
+      5,
+      1,
+      22,
+      1,
+      "INT"
+    ],
+    [
+      48,
+      5,
+      2,
+      22,
+      2,
+      "AUDIO"
+    ],
+    [
+      49,
+      5,
+      3,
+      22,
+      3,
+      "VHS_VIDEOINFO"
+    ],
+    [
+      50,
+      21,
+      0,
+      22,
+      4,
+      "DWOPOSE_CUSTOM_OPTIONS"
+    ],
+    [
+      51,
+      22,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      53,
+      22,
+      2,
+      18,
+      0,
+      "IMAGE"
+    ],
+    [
+      54,
+      22,
+      3,
+      15,
+      0,
+      "IMAGE"
+    ],
+    [
+      55,
+      22,
+      4,
+      9,
+      1,
+      "AUDIO"
+    ],
+    [
+      56,
+      22,
+      5,
+      9,
+      4,
+      "FLOAT"
+    ],
+    [
+      57,
+      22,
+      1,
+      23,
+      0,
+      "IMAGE"
+    ],
+    [
+      58,
+      23,
+      0,
+      16,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7006048387096774,
+      "scale": 0.7006048387096782,
       "offset": [
-        -73.7525179856113,
-        -170.32517985611503
+        -217.16061136571795,
+        -185.40362972179724
       ]
     },
-    "frontendVersion": "1.30.6",
+    "frontendVersion": "1.32.10",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,

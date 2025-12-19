@@ -21,7 +21,7 @@ def padRightDownCorner(img, stride, padValue):
     return img_padded, pad
 
 
-def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
+def draw_bodypose_with_feet(canvas, candidate, subset, show_feet_orig, options={}, pose_opacity=1.0):
     H, W, C = canvas.shape
     candidate = np.array(candidate)
     subset = np.array(subset)
@@ -31,12 +31,18 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
     stickwidth = max(1, 4 + thickness_mod)
     dot_radius = max(1, 4 + dot_size_mod)
 
+    # Hand-derived sizes for feet
+    hand_thickness_mod = options.get('hand_line_thickness_modifier', 0)
+    hand_dot_size_mod = options.get('hand_dot_size_modifier', 0)
+    feet_stickwidth = max(1, 2 + hand_thickness_mod)
+    feet_dot_radius = max(1, 4 + hand_dot_size_mod)
+
     limbSeq = [
         [2, 3], [2, 6], [3, 4], [4, 5], [6, 7], [7, 8], [2, 9], [9, 10],
         [10, 11], [2, 12], [12, 13], [13, 14], [2, 1], [1, 15], [15, 17],
         [1, 16], [16, 18],
         
-        [11, 24], [14, 21], [14, 19], [19, 20], [20, 21], [11, 22], [22, 23], [23, 24] # Feet
+        [11, 24], [14, 21], [19, 21], [19, 20], [20, 21], [22, 24], [22, 23], [23, 24] # Feet
     ]
 
     colors = [
@@ -55,12 +61,14 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
     for i in range(len(limbSeq)):
         limb = limbSeq[i]
         limb_indices = np.array(limb) - 1
-        p1_idx, p2_idx = limb_indices[0], limb_indices[1]
+        
+        # Use thinner stickwidth for foot-specific bones (index 17 onwards)
+        current_stickwidth = feet_stickwidth if i >= 17 else stickwidth
 
         color_to_use = None
-        if (p1_idx in LEFT_FOOT_JOINTS or p2_idx in LEFT_FOOT_JOINTS):
+        if (limb_indices[0] in LEFT_FOOT_JOINTS or limb_indices[1] in LEFT_FOOT_JOINTS):
             color_to_use = colors[L_ANKLE_IDX]
-        elif (p1_idx in RIGHT_FOOT_JOINTS or p2_idx in RIGHT_FOOT_JOINTS):
+        elif (limb_indices[0] in RIGHT_FOOT_JOINTS or limb_indices[1] in RIGHT_FOOT_JOINTS):
             color_to_use = colors[R_ANKLE_IDX]
         else:
             color_to_use = colors[i]
@@ -81,10 +89,10 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
             if length < 1: continue
 
             angle = math.degrees(math.atan2(X[0] - X[1], Y[0] - Y[1]))
-            polygon = cv2.ellipse2Poly((int(mY), int(mX)), (int(length / 2), stickwidth), int(angle), 0, 360, 1)
+            polygon = cv2.ellipse2Poly((int(mY), int(mX)), (int(length / 2), current_stickwidth), int(angle), 0, 360, 1)
             cv2.fillConvexPoly(canvas, polygon, cv_color)
 
-    canvas = (canvas * 0.6).astype(np.uint8)
+    canvas = (canvas * pose_opacity).astype(np.uint8)
 
     num_total_points = 24
     for i in range(num_total_points):
@@ -98,6 +106,9 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
             color_to_use = colors[i]
 
         cv_color = (int(color_to_use[0]), int(color_to_use[1]), int(color_to_use[2]))
+        
+        # Use smaller radius for toe/heel joints (index 18 onwards)
+        current_radius = feet_dot_radius if i >= 18 else dot_radius
 
         for n in range(len(subset)):
             if i >= subset.shape[1]: continue
@@ -105,11 +116,11 @@ def draw_bodypose_with_feet(canvas, candidate, subset, options={}):
             if index == -1 or index >= len(candidate): continue
             x, y = candidate[index][0:2]
             x, y = int(x * W), int(y * H)
-            cv2.circle(canvas, (int(x), int(y)), dot_radius, cv_color, thickness=-1)
+            cv2.circle(canvas, (int(x), int(y)), current_radius, cv_color, thickness=-1)
     return canvas
 
 
-def draw_bodypose_without_feet(canvas, candidate, subset, options={}):
+def draw_bodypose_without_feet(canvas, candidate, subset, options={}, pose_opacity=1.0):
     H, W, C = canvas.shape
     candidate = np.array(candidate)
     subset = np.array(subset)
@@ -141,7 +152,7 @@ def draw_bodypose_without_feet(canvas, candidate, subset, options={}):
             polygon = cv2.ellipse2Poly((int(mY), int(mX)), (int(length / 2), stickwidth), int(angle), 0, 360, 1)
             cv2.fillConvexPoly(canvas, polygon, colors[i])
 
-    canvas = (canvas * 0.6).astype(np.uint8)
+    canvas = (canvas * pose_opacity).astype(np.uint8)
 
     for i in range(18):
         for n in range(len(subset)):
@@ -154,11 +165,11 @@ def draw_bodypose_without_feet(canvas, candidate, subset, options={}):
             cv2.circle(canvas, (int(x), int(y)), dot_radius, colors[i], thickness=-1)
     return canvas
 
-def draw_bodypose(canvas, candidate, subset, show_feet, options={}):
+def draw_bodypose(canvas, candidate, subset, show_feet, options={}, pose_opacity=1.0):
     if show_feet:
-        return draw_bodypose_with_feet(canvas, candidate, subset, options)
+        return draw_bodypose_with_feet(canvas, candidate, subset, show_feet, options, pose_opacity)
     else:
-        return draw_bodypose_without_feet(canvas, candidate, subset, options)
+        return draw_bodypose_without_feet(canvas, candidate, subset, options, pose_opacity)
 
 
 def draw_handpose(canvas, all_hand_peaks, options={}):

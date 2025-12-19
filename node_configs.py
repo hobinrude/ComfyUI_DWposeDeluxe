@@ -42,6 +42,25 @@ def get_node_config(node_class):
     return NODE_CONFIGS.get(node_class.__name__)
 
 
+add_node_config("KeypointDiff", NodeConfig(
+    short_description="Compares two keypoint datasets and reports differences.",
+    long_description="""
+**Function:** Compares every (x, y, confidence) value between two keypoint datasets of the same length.
+
+### Inputs
+- **keypoints_1:** The first keypoint dataset (baseline).
+- **keypoints_2:** The second keypoint dataset (to compare).
+
+### Outputs
+- **diff_info:** A string report detailing frame count, people count, and value mismatches.
+
+### Notes
+- Automatically ignores minor rounding differences (delta < 0.0001).
+- Logs a summary to the console: `logger.info` for a perfect match, `logger.warning` if discrepancies are found.
+- Useful for verifying data integrity after multiple conversions or reversals.
+    """
+))
+
 add_node_config("DWposeDeluxeNode", NodeConfig(
     short_description="Main node for DWpose, detects and renders human poses.",
     long_description="""
@@ -297,5 +316,58 @@ add_node_config("MergeKeypoints", NodeConfig(
 ### Notes
 - Inputs must have the same canvas size and same number of frames.
 - Coordinate format (absolute/normalized) will be matched to keypoints_1.
+    """
+))
+
+add_node_config("CherryPickerFrames", NodeConfig(
+    short_description="Selects best keypoints from over-sampled data.",
+    long_description="""
+**Function:** Reduces an over-sampled (high FPS) keypoint dataset by selecting the highest-confidence individual keypoints from each frame chunk.
+
+### Inputs
+- **pose_keypoints:** The keypoint dataset (e.g., from a 2x VFI source).
+
+### Parameters
+- **factor:** The downsampling factor (e.g., 2 for 2x source to 1x output).
+
+### Outputs
+- **pose_keypoints:** The downsampled keypoint data with cherry-picked confident points.
+
+### Notes
+- This node is designed to combat jitter and noise from detection models by leveraging over-sampling.
+- It is ideal for use after generating keypoints from a VFI (Video Frame Interpolation) output.
+- Logs a summary of confidence gain per body point upon completion.
+    """
+))
+
+add_node_config("ReverseKeypoints", NodeConfig(
+    short_description="Reverses a keypoint batch.",
+    long_description="""
+**Function:** Reverses the temporal order of frames in a keypoint batch.
+
+### Inputs
+- **pose_keypoints:** The keypoint sequence to reverse.
+
+### Outputs
+- **pose_keypoints:** The reversed keypoint sequence.
+    """
+))
+
+add_node_config("CherryPickerTwoInputs", NodeConfig(
+    short_description="Cherry-picks best keypoints between two datasets.",
+    long_description="""
+**Function:** Takes two keypoint datasets of the same length and creates a new one by choosing the most confident individual keypoints from either input for each frame.
+
+### Inputs
+- **keypoints_1:** The first keypoint dataset (baseline for gain summary).
+- **keypoints_2:** The second keypoint dataset.
+
+### Outputs
+- **pose_keypoints:** The merged keypoint data with the best points from both inputs.
+
+### Notes
+- Inputs must have the same number of frames.
+- Useful for merging results from different detection/estimation models.
+- Logs a summary of confidence gain per body point upon completion.
     """
 ))

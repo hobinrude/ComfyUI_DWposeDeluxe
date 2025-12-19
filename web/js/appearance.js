@@ -12,7 +12,14 @@ const NODE_COLORS = {
     "FrameNumberNode": "blue",
     "KeypointPrinter": "blue",
     "PoseInterpolation": "blue",
-    "PoseResize": "blue"
+    "PoseResize": "blue",
+    "KeypointRangeFromBatch": "blue",
+    "BatchKeypoints": "blue",
+    "MergeKeypoints": "blue",
+    "ReverseKeypoints": "blue",
+    "KeypointDiff": "blue",
+    "CherryPickerFrames": "blue",
+    "CherryPickerTwoInputs": "blue"
 };
 
 function shuffleArray(array) {

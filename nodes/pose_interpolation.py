@@ -7,7 +7,6 @@ import numpy as np
 from comfy.model_management import InterruptProcessingException
 from ..scripts import logger
 
-
 class PoseInterpolation(DWposeNodeBase):
     @staticmethod
     def _get_pose_from_dataset(dataset, frame_selector):
@@ -77,7 +76,6 @@ class PoseInterpolation(DWposeNodeBase):
     FUNCTION = "execute"
     CATEGORY = "DWposeDeluxe"
 
-
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -89,7 +87,6 @@ class PoseInterpolation(DWposeNodeBase):
                 "frame_count": ("INT", {"default": 1, "min": 1, "max": 99, "step": 1}),
             }
         }
-
 
     def execute(self, keypoints_1, keypoints_2, keypoints_1_frame, keypoints_2_frame, frame_count):
         if not keypoints_1 or not keypoints_2:
@@ -161,4 +158,5 @@ class PoseInterpolation(DWposeNodeBase):
         return (interpolated_frames,)
 
 NODE_CLASS_MAPPINGS = {"PoseInterpolation": PoseInterpolation}
+
 NODE_DISPLAY_NAME_MAPPINGS = {"PoseInterpolation": "DWposeDeluxe Pose Interpolation"}

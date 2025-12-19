@@ -1,62 +1,29 @@
 # ComfyUI_DWposeDeluxe/nodes/keypoint_converter.py
 
 from ..node_configs import DWposeNodeBase
+from ..scripts.keypoint_utils import UnifiedKeypointHandler
 import json
 import os
 import folder_paths
 import copy
 
-def detect_format(data):
-    for item in data:
-        for person in item.get("people", []):
-            pts = person.get("pose_keypoints_2d", [])
-            if pts:
-                xs = pts[0::3][:5]
-                ys = pts[1::3][:5]
-                if any(x > 2 or y > 2 for x, y in zip(xs, ys)):
-                    return "absolute"
-                else:
-                    return "normalized"
-    return "unknown"
-
-
-def detect_coordinate_format(data):
-    for item in data:
-        for person in item.get("people", []):
-            pts = person.get("pose_keypoints_2d", [])
-            if pts:
-                for i in range(0, min(len(pts), 15), 3):
-                    if abs(pts[i]) > 1.0 or abs(pts[i + 1]) > 1.0:
-                        return "absolute"
-    return "normalized"
-
-def convert_pose(data, width, height, current_format, target_format, add_canvas_size_to_output=True):
-    if current_format != target_format:
-        for item in data:
-            for person in item.get("people", []):
-                for key in [
-                    "pose_keypoints_2d",
-                    "face_keypoints_2d",
-                    "hand_left_keypoints_2d",
-                    "hand_right_keypoints_2d",
-                ]:
-                    if key in person:
-                        pts = person[key]
-                        for i in range(0, len(pts), 3):
-                            if target_format == "normalized":
-                                if width > 0: pts[i] /= width
-                                if height > 0: pts[i+1] /= height
-                            else:
-                                pts[i] *= width
-                                pts[i+1] *= height
-                        person[key] = pts
-    
-    if add_canvas_size_to_output:
-        for item in data:
-            item["canvas_width"] = width
-            item["canvas_height"] = height
-            
-    return data
+def remove_empty_keypoints(data):
+    cleaned_data = []
+    for frame in data:
+        new_frame = {}
+        for key, value in frame.items():
+            if key == "people":
+                cleaned_people = []
+                for person in value:
+                    cleaned_person = {k: v for k, v in person.items() if not (isinstance(v, list) and not v)}
+                    if cleaned_person:
+                        cleaned_people.append(cleaned_person)
+                if cleaned_people:
+                    new_frame["people"] = cleaned_people
+            else:
+                new_frame[key] = value
+        cleaned_data.append(new_frame)
+    return cleaned_data
 
 
 def pretty_json_triplets_converter(data):
@@ -94,48 +61,6 @@ def pretty_json_triplets_converter(data):
         output_frames.append("    {\n" + ",\n".join(frame_parts) + "\n    }")
     return "[\n" + ",\n".join(output_frames) + "\n]"
 
-def remove_empty_keypoints(data):
-    cleaned_data = []
-    for frame in data:
-        new_frame = {}
-        for key, value in frame.items():
-            if key == "people":
-                cleaned_people = []
-                for person in value:
-                    cleaned_person = {k: v for k, v in person.items() if not (isinstance(v, list) and not v)}
-                    if cleaned_person:
-                        cleaned_people.append(cleaned_person)
-                if cleaned_people:
-                    new_frame["people"] = cleaned_people
-            else:
-                new_frame[key] = value
-        cleaned_data.append(new_frame)
-    return cleaned_data
-
-
-def filter_keypoints_by_confidence(data, confidence_threshold, reset_confidence=False):
-    for item in data:
-        for person in item.get("people", []):
-            for key in [
-                "pose_keypoints_2d",
-                "face_keypoints_2d",
-                "hand_left_keypoints_2d",
-                "hand_right_keypoints_2d",
-            ]:
-                if key in person:
-                    pts = person[key]
-                    for i in range(0, len(pts), 3):
-                        if reset_confidence:
-                            if pts[i + 2] < confidence_threshold:
-                                pts[i + 2] = 0.0
-                            else:
-                                pts[i + 2] = 1.0
-                        else:
-                            if pts[i + 2] < confidence_threshold:
-                                pts[i] *= -1
-                                pts[i + 1] *= -1
-    return data
-
 
 class KeypointConverter(DWposeNodeBase):
     RETURN_TYPES = ("POSE_KEYPOINT", "STRING")
@@ -165,7 +90,6 @@ class KeypointConverter(DWposeNodeBase):
             data_str = pose_keypoints
             data = json.loads(data_str)
         else:
-            data_str = ""
             data = copy.deepcopy(pose_keypoints)
 
         info_data = copy.deepcopy(data)
@@ -178,7 +102,7 @@ class KeypointConverter(DWposeNodeBase):
             pose_info = "Error: No keypoints data provided."
         else:
             try:
-                pose_format = detect_format(info_data)
+                pose_format = UnifiedKeypointHandler.detect_format(info_data)
                 json_structure = "in-memory"
 
                 confidence_variable = False
@@ -263,8 +187,10 @@ class KeypointConverter(DWposeNodeBase):
             except Exception as e:
                 pose_info = f"Error generating pose info: {e}"
 
-        data = filter_keypoints_by_confidence(data, confidence_threshold, reset_confidence)
-        data = remove_empty_keypoints(data)
+        if reset_confidence:
+            data = UnifiedKeypointHandler.reset_confidence(data, confidence_threshold)
+            
+data = remove_empty_keypoints(data)
 
         final_width = None
         final_height = None
@@ -333,21 +259,26 @@ class KeypointConverter(DWposeNodeBase):
         final_width = int(final_width)
         final_height = int(final_height)
 
-        current_format = detect_coordinate_format(data)
-        output_format = "normalized" if force_normalized else "absolute"
-        converted_data = convert_pose(data, final_width, final_height, current_format, output_format, add_canvas_size_to_output)
+        current_format = UnifiedKeypointHandler.detect_format(data)
+        
+        if force_normalized:
+            if current_format == "absolute":
+                data = UnifiedKeypointHandler.to_normalized(data, final_width, final_height)
+        else:
+            if current_format == "normalized":
+                data = UnifiedKeypointHandler.to_absolute(data, final_width, final_height)
 
         if pretty_json:
-            converted_json_string = pretty_json_triplets_converter(converted_data)
+            converted_json_string = pretty_json_triplets_converter(data)
         else:
-            converted_json_string = json.dumps(converted_data, separators=(",", ":"))
+            converted_json_string = json.dumps(data, separators=( ",", ":"))
 
         if save_output:
             output_dir = folder_paths.get_output_directory()
             os.makedirs(output_dir, exist_ok=True)
             i = 1
             while True:
-                filename = f"keypoints_{output_format}_{i:04d}.json"
+                filename = f"keypoints_{'normalized' if force_normalized else 'absolute'}_{i:04d}.json"
                 filepath = os.path.join(output_dir, filename)
                 if not os.path.exists(filepath):
                     break
@@ -358,7 +289,7 @@ class KeypointConverter(DWposeNodeBase):
         if pretty_json:
             return (converted_json_string, pose_info)
         else:
-            return (converted_data, pose_info)
+            return (data, pose_info)
 
 NODE_CLASS_MAPPINGS = {"KeypointConverter": KeypointConverter}
 

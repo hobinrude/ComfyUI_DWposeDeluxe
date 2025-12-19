@@ -6,6 +6,7 @@ import sys
 import cv2
 import time
 import json
+import copy
 import torch
 import numpy as np
 import folder_paths
@@ -299,9 +300,9 @@ class DWposeDeluxeNode(DWposeNodeBase):
     def process_frames(self, dwpose_detector, image, pose_output_tensor, batch_size, height, width, 
                          show_body, show_face, show_hands, show_feet, crop_face, poses_to_detect,
                          actual_options,
-                         provider_type, precision):
+                         provider_type, precision, pose_opacity: float = 0.6):
 
-        logger.info(f"Limiting pose detections to top {poses_to_detect} people by bounding box area\n")
+        logger.info(f"Limiting pose detections to top {poses_to_detect} people by bounding box area")
         logger.info(f"Processing {batch_size} frames of size {width}x{height}" + (f" using TensorRT ({precision})" if provider_type == "GPU" else ""))
         pbar = progress(batch_size, label="Pose")
 
@@ -322,6 +323,7 @@ class DWposeDeluxeNode(DWposeNodeBase):
                     show_feet=show_feet,
                     _calculate_face=face_data_needed,
                     poses_to_detect=poses_to_detect,
+                    pose_opacity=pose_opacity,
                     **actual_options
                 )
 
@@ -396,9 +398,20 @@ class DWposeDeluxeNode(DWposeNodeBase):
                 max_faces_per_frame = len(current_frame_faces_temp)
 
         if all_square_dims:
-            biggest_square_dim = max(all_square_dims)
-            master_size = round_to_nearest_multiple(biggest_square_dim)
-        
+            sorted_square_dims = sorted(all_square_dims)
+            
+            # Calculate the index for the 90th percentile
+            # This ensures robustness against extreme outliers caused by "broken detections"
+            percentile_idx = int(len(sorted_square_dims) * 0.90) 
+            if percentile_idx >= len(sorted_square_dims): # Safeguard for small lists
+                percentile_idx = len(sorted_square_dims) - 1
+            
+            biggest_square_dim_robust = sorted_square_dims[percentile_idx]
+            
+            master_size = round_to_nearest_multiple(biggest_square_dim_robust)
+        else:
+            master_size = 0 # No faces detected, so master_size is 0
+
         return faces_by_frame, master_size, max_faces_per_frame
 
 
@@ -531,7 +544,16 @@ class DWposeDeluxeNode(DWposeNodeBase):
                     padded_crop = torch.zeros((square_dim, square_dim, 3), device='cpu', dtype=image_tensor.dtype)
                     pad_top = src_y1_clip - src_y1
                     pad_left = src_x1_clip - src_x1
-                    padded_crop[pad_top:pad_top+source_crop_tensor.shape[0], pad_left:pad_left+source_crop_tensor.shape[1], :] = source_crop_tensor
+
+                    final_dest_y_end = min(square_dim, pad_top + source_crop_tensor.shape[0])
+                    final_dest_x_end = min(square_dim, pad_left + source_crop_tensor.shape[1])
+                    
+                    final_src_y_size = final_dest_y_end - pad_top
+                    final_src_x_size = final_dest_x_end - pad_left
+
+                    if (final_src_y_size > 0 and final_src_x_size > 0):
+                        padded_crop[pad_top:final_dest_y_end, pad_left:final_dest_x_end, :] = \
+                            source_crop_tensor[0:final_src_y_size, 0:final_src_x_size, :]
 
                     resize_input = padded_crop.permute(2, 0, 1).unsqueeze(0).to(process_device)
                     scaled_crop_tensor = torch.nn.functional.interpolate(resize_input, size=(master_size, master_size), mode='area')
@@ -563,7 +585,15 @@ class DWposeDeluxeNode(DWposeNodeBase):
                 face_atlas_tensor = self.generate_face_atlas_cpu(image, all_keypoints_data, face_padding, height, width)
         
         source_output_tensor = image
-        keypoints_json_string = json.dumps(all_keypoints_data)
+
+        import copy
+        cleaned_keypoints_data = copy.deepcopy(all_keypoints_data)
+        for frame in cleaned_keypoints_data:
+            if 'people' in frame:
+                for person in frame['people']:
+                    person.pop('face_box', None)
+
+        keypoints_json_string = json.dumps(cleaned_keypoints_data)
 
         if save_keypoints:
             output_dir = folder_paths.get_output_directory()
@@ -577,7 +607,6 @@ class DWposeDeluxeNode(DWposeNodeBase):
                 i += 1
             with open(filepath, "w") as f:
                 f.write(keypoints_json_string)
-        sys.stdout.write('\n')
         ui_output = {}
         if built_new_model:
             ui_output = {"ui": {"model_refresh_needed": True}}
@@ -620,27 +649,34 @@ class DWposeDeluxeNode(DWposeNodeBase):
             "face_threshold": 0.10,
             "hand_threshold": 0.10,
             "face_padding": 0,
-            "neck_validity": 0.30,
+            "pose_opacity": 0.6,
+            "neck_validity": 0.3,
             "nms_threshold": 0.45,
-            "score_threshold": 0.10,
+            "score_threshold": 0.1,
+            "memory_debug_log": False,
         }
         actual_options.update(default_options)
 
         if custom_options is not None:
-            actual_options.update(custom_options)
-            logger.info(f"Received options from node:")
-            print(f"Body dot size modifier       : {actual_options['body_dot_size_modifier']}")
-            print(f"Body bone thickness modifier : {actual_options['body_line_thickness_modifier']}")
-            print(f"Hand dot size modifier       : {actual_options['hand_dot_size_modifier']}")
-            print(f"Hand bone thickness modifier : {actual_options['hand_line_thickness_modifier']}")
-            print(f"Face dot size modifier       : {actual_options['face_dot_size_modifier']}")
-            print(f"Pose threshold               : {actual_options['pose_threshold']}")
-            print(f"Body threshold               : {actual_options['body_threshold']}")
-            print(f"Face threshold               : {actual_options['face_threshold']}")
-            print(f"Hand threshold               : {actual_options['hand_threshold']}")
-            print(f"Face padding                 : {actual_options['face_padding']}")
+            actual_options.update(copy.deepcopy(custom_options))
+            logger.info(f"Received options from CustomOptions node:")
+            print(f" Body dot size modifier       : {actual_options['body_dot_size_modifier']}")
+            print(f" Body bone thickness modifier : {actual_options['body_line_thickness_modifier']}")
+            print(f" Hand dot size modifier       : {actual_options['hand_dot_size_modifier']}")
+            print(f" Hand bone thickness modifier : {actual_options['hand_line_thickness_modifier']}")
+            print(f" Face dot size modifier       : {actual_options['face_dot_size_modifier']}")
+            print(f" Pose threshold               : {actual_options['pose_threshold']}")
+            print(f" Body threshold               : {actual_options['body_threshold']}")
+            print(f" Face threshold               : {actual_options['face_threshold']}")
+            print(f" Hand threshold               : {actual_options['hand_threshold']}")
+            print(f" Face padding                 : {actual_options['face_padding']}")
+            print(f" Pose opacity                 : {actual_options['pose_opacity']}")
+            print(f" Neck validity threshold      : {actual_options['neck_validity']}")
+            print(f" NMS threshold                : {actual_options['nms_threshold']}")
+            print(f" Score threshold              : {actual_options['score_threshold']}")
+            print(f" Memory debug log             : {actual_options['memory_debug_log']}")
         else:
-            logger.warning(f"CustomOptions node not connected, using default modifiers and thresholds")
+            logger.warning(f"CustomOptions node not connected, using default modifiers and thresholds.")
 
         pose_threshold = actual_options["pose_threshold"]
         body_threshold = actual_options["body_threshold"]
@@ -661,8 +697,9 @@ class DWposeDeluxeNode(DWposeNodeBase):
         dwpose_detector, built_new_model = self.initialize_dwpose_detector(provider_type, precision, detector_model, estimator_model)
         if provider_type == "GPU":
             dwpose_detector.activate_engines()
-        
-        pose_output_tensor = torch.zeros(image.shape, dtype=torch.float32, device='cpu')
+            pose_output_tensor = torch.zeros(image.shape, dtype=torch.float32, device='cuda')
+        else:
+            pose_output_tensor = torch.zeros(image.shape, dtype=torch.float32, device='cpu')
 
         all_keypoints_data = self.process_frames(
             dwpose_detector=dwpose_detector,
@@ -679,18 +716,9 @@ class DWposeDeluxeNode(DWposeNodeBase):
             poses_to_detect=poses_to_detect,
             actual_options=actual_options,
             provider_type=provider_type,
-            precision=precision
+            precision=precision,
+            pose_opacity=actual_options.get("pose_opacity", 0.6)
         )
-
-        if provider_type == "GPU" and make_blend:
-             try:
-                 pose_output_tensor_gpu = pose_output_tensor.to("cuda")
-                 del pose_output_tensor
-                 pose_output_tensor = pose_output_tensor_gpu
-                 gc.collect()
-                 torch.cuda.empty_cache()
-             except Exception as e:
-                 logger.warning(f"Failed to move pose tensor to GPU: {e}")
 
         outputs = self.generate_outputs(
             image=image,

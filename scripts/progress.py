@@ -1,8 +1,7 @@
-# ComfyUI_DWposeDeluxe/scripts/progress.py
-
 from comfy.utils import ProgressBar as UIProgressBar
 import sys, time, os, json
 from . import memplot
+from .logger import logger
 
 try:
     import psutil
@@ -14,11 +13,12 @@ try:
 except ImportError:
     pynvml = None
 
-# Global Logging State
+
 _LOG_ENABLED = False
 _LOG_PATH = None
 _LOG_PROVIDER = "CPU"
 _NVML_HANDLE = None
+
 
 def setup(enabled=False, output_dir=None, provider="CPU", batch_size=0, height=0, width=0, poses_to_detect=0):
     global _LOG_ENABLED, _LOG_PATH, _LOG_PROVIDER, _NVML_HANDLE
@@ -42,7 +42,6 @@ def setup(enabled=False, output_dir=None, provider="CPU", batch_size=0, height=0
                 'poses_to_detect': poses_to_detect
             }
 
-            # Init NVML
             if _LOG_PROVIDER == "GPU" and pynvml:
                 try:
                     pynvml.nvmlInit()
@@ -50,7 +49,6 @@ def setup(enabled=False, output_dir=None, provider="CPU", batch_size=0, height=0
                 except Exception:
                     pass
             
-            # Write Headers
             if not os.path.exists(_LOG_PATH):
                 with open(_LOG_PATH, "w") as f:
                     meta_str = json.dumps(metadata)
@@ -59,8 +57,9 @@ def setup(enabled=False, output_dir=None, provider="CPU", batch_size=0, height=0
         except Exception:
             pass
 
+
 def finalize():
-    global _NVML_HANDLE
+    global _NVML_HANDLE, _LOG_ENABLED
     # Shutdown NVML
     if _NVML_HANDLE and pynvml:
         try:
@@ -72,27 +71,34 @@ def finalize():
     # Trigger Plot
     if _LOG_ENABLED and _LOG_PATH and os.path.exists(_LOG_PATH):
         try:
-            memplot.create_memplot(_LOG_PATH)
+            # Temporarily disable logging to prevent recursive logging during plot generation
+            was_logging_enabled = _LOG_ENABLED
+            _LOG_ENABLED = False 
+
+            memplot.generate_with_progress(_LOG_PATH)
+            
+            # Restore logging state
+            _LOG_ENABLED = was_logging_enabled
         except Exception as e:
-            print(f"[DWposeDLX] Failed to create memory plot: {e}")
+            logger.error(f"Failed to create memory plot: {e}")
 
 
 FG_FILLED = "\033[38;2;0;100;200m"
 FG_EMPTY  = "\033[38;2;0;50;100m"
 RESET     = "\033[0m"
 
+
 class Progress:
-    def __init__(self, total, label="Processing", bar_width=50):
+    def __init__(self, total, label="Processing", bar_width=58):
         self.total = max(1, int(total))
         self.label = label
         self.bar_width = bar_width
         self.current = 0
         self.start_time = time.time()
         self.ui_bar = UIProgressBar(total)
-        self.fps_text = ""  # Store last calculated FPS text
-        self.eta_text = ""  # Store last calculated ETA text
+        self.fps_text = ""
+        self.eta_text = "" 
 
-        # Write Loop Header if logging is enabled
         if _LOG_ENABLED and _LOG_PATH:
             try:
                 ram_total = 0.0
@@ -111,6 +117,7 @@ class Progress:
         sys.stdout.flush()
         time.sleep(0.001)
 
+
     def log_memory(self):
         try:
             ram_used = 0.0
@@ -126,6 +133,7 @@ class Progress:
                 f.write(f"{self.current},{ram_used:.2f},{vram_used:.2f}\n")
         except Exception:
             pass
+
 
     def step(self, n=1):
         self.current = min(self.total, self.current + n)
@@ -151,13 +159,12 @@ class Progress:
         remaining = self.total - self.current
         eta = remaining / max(fps, 0.001)
         
-        # Convert ETA to MMmSSs format, ensuring consistent "ETA" prefix
-        if remaining <= 0: # When loop is complete or nearly complete
+        if remaining <= 0:
             self.eta_text = "ETA 0s"
         elif eta > 60:
             minutes = int(eta // 60)
             seconds = int(eta % 60)
-            self.eta_text = f"ETA {minutes}m{seconds:02}s" # :02 pads with leading zero
+            self.eta_text = f"ETA {minutes}m{seconds:02}s"
         else: # eta > 0 and <= 60
             self.eta_text = f"ETA {int(eta)}s"
 
@@ -170,10 +177,10 @@ class Progress:
 
         self.ui_bar.update(1)
 
+
     def finish(self):
         elapsed_time = time.time() - self.start_time
         
-        # Format elapsed time to MMmSSs
         if elapsed_time > 60:
             minutes = int(elapsed_time // 60)
             seconds = int(elapsed_time % 60)
@@ -181,7 +188,6 @@ class Progress:
         else:
             elapsed_text = f"{int(elapsed_time)}s "
 
-        # Overwrite the last progress bar line with final 100%, FPS and ELP time
         final_bar = (
             f"{FG_FILLED}{'█' * self.bar_width}"
             f"{FG_EMPTY}{'░' * (0)}"
@@ -189,14 +195,15 @@ class Progress:
         )
         sys.stdout.write(
             f'\r100% {final_bar} 100% | {self.label} {self.total}/{self.total}'
-            f' | {self.fps_text} | ELP {elapsed_text} ' # Display FPS and ELP time
+            f' | {self.fps_text} | ELP {elapsed_text} '
         )
         sys.stdout.write("\n")
         sys.stdout.flush()
 
 
-def progress(total, label="Processing", bar_width=60):
+def progress(total, label="Processing", bar_width=58):
     return Progress(total, label, bar_width)
+
 
 progress.setup = setup
 progress.finalize = finalize

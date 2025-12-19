@@ -69,7 +69,7 @@ class DWposeDetector:
                 self.det_session.reset()
                 self.pose_session.reset()
 
-    def __call__(self, oriImg, show_body=True, show_face=True, show_hands=True, show_feet=True, poses_to_detect: int = 1, pose_threshold: float = 0.25, body_threshold: float = 0.3, face_threshold: float = 0.1, hand_threshold: float = 0.1, **render_options):
+    def __call__(self, oriImg, show_body=True, show_face=True, show_hands=True, show_feet=True, poses_to_detect: int = 1, pose_threshold: float = 0.25, body_threshold: float = 0.3, face_threshold: float = 0.1, hand_threshold: float = 0.1, pose_opacity: float = 1.0, **render_options):
         H, W, C = oriImg.shape
         
         neck_validity = render_options.get('neck_validity', 0.3)
@@ -264,10 +264,10 @@ class DWposeDetector:
             people_data.append(person_keypoints_data)
 
         keypoints_json_data = {"people": people_data}
-        final_canvas = draw_pose(pose, H, W, show_body=show_body, show_face=show_face, show_hands=show_hands, show_feet=show_feet, options=render_options)
+        final_canvas = draw_pose(pose, H, W, show_body=show_body, show_face=show_face, show_hands=show_hands, show_feet=show_feet, options=render_options, pose_opacity=pose_opacity)
         return final_canvas, keypoints_json_data
 
-def draw_pose(pose, H, W, show_body=True, show_face=True, show_hands=True, show_feet=True, options={}):
+def draw_pose(pose, H, W, show_body=True, show_face=True, show_hands=True, show_feet=True, options={}, pose_opacity=1.0):
     bodies = pose['bodies']
     faces = pose['faces']
     hands = pose['hands']
@@ -277,7 +277,7 @@ def draw_pose(pose, H, W, show_body=True, show_face=True, show_hands=True, show_
 
     if show_body:
         if isinstance(candidate, np.ndarray) and isinstance(subset, np.ndarray) and candidate.size > 0 and subset.size > 0:
-            canvas = util.draw_bodypose(canvas, candidate, subset, show_feet=show_feet, options=options)
+            canvas = util.draw_bodypose(canvas, candidate, subset, show_feet=show_feet, options=options, pose_opacity=pose_opacity)
         else:
             logger.warning(f"Skipping body/feet drawing due to empty candidate or subset")
 

@@ -1,11 +1,8 @@
-# ComfyUI_DWposeDeluxe/nodes/edit_nodes.py
-
 from ..node_configs import DWposeNodeBase
 from ..scripts import logger
-from .keypoint_converter import detect_coordinate_format, convert_pose
+from ..scripts.keypoint_utils import UnifiedKeypointHandler
 import copy
 import json
-
 
 def ensure_list(keypoints_data):
     if isinstance(keypoints_data, str):
@@ -22,7 +19,6 @@ def ensure_list(keypoints_data):
         return []
     
     return keypoints_data
-
 
 class KeypointRangeFromBatch(DWposeNodeBase):
     RETURN_TYPES = ("POSE_KEYPOINT",)
@@ -70,7 +66,6 @@ class BatchKeypoints(DWposeNodeBase):
             }
         }
 
-
     def execute(self, keypoints_1, keypoints_2):
         keypoints_1 = ensure_list(keypoints_1)
         keypoints_2 = ensure_list(keypoints_2)
@@ -91,7 +86,6 @@ class BatchKeypoints(DWposeNodeBase):
         
         return (keypoints_1 + keypoints_2,)
 
-
 class MergeKeypoints(DWposeNodeBase):
     RETURN_TYPES = ("POSE_KEYPOINT",)
     RETURN_NAMES = ("pose_keypoints",)
@@ -107,7 +101,6 @@ class MergeKeypoints(DWposeNodeBase):
             }
         }
 
-
     def execute(self, keypoints_1, keypoints_2):
         keypoints_1 = ensure_list(keypoints_1)
         keypoints_2 = ensure_list(keypoints_2)
@@ -120,6 +113,7 @@ class MergeKeypoints(DWposeNodeBase):
              logger.error(f"MergeKeypoints: Frame count mismatch ({len(keypoints_1)} vs {len(keypoints_2)}). Cannot merge.")
              return (keypoints_1,)
 
+        # Check dimensions
         k1_w = keypoints_1[0].get("canvas_width")
         k1_h = keypoints_1[0].get("canvas_height")
         k2_w = keypoints_2[0].get("canvas_width")
@@ -128,14 +122,18 @@ class MergeKeypoints(DWposeNodeBase):
         if k1_w != k2_w or k1_h != k2_h:
              logger.warning(f"MergeKeypoints: Canvas dimensions mismatch (1: {k1_w}x{k1_h}, 2: {k2_w}x{k2_h}). Merged canvas will use dimensions from input 1.")
         
-        fmt1 = detect_coordinate_format(keypoints_1)
-        fmt2 = detect_coordinate_format(keypoints_2)
+        # Align format of keypoints_2 to keypoints_1
+        fmt1 = UnifiedKeypointHandler.detect_format(keypoints_1)
+        fmt2 = UnifiedKeypointHandler.detect_format(keypoints_2)
         
         kp2_aligned = copy.deepcopy(keypoints_2)
         
         if fmt1 != fmt2:
              logger.info(f"MergeKeypoints: Converting input 2 format ({fmt2}) to match input 1 ({fmt1}).")
-             kp2_aligned = convert_pose(kp2_aligned, k1_w, k1_h, fmt2, fmt1, add_canvas_size_to_output=False)
+             if fmt1 == "normalized":
+                 kp2_aligned = UnifiedKeypointHandler.to_normalized(kp2_aligned, k2_w, k2_h)
+             else:
+                 kp2_aligned = UnifiedKeypointHandler.to_absolute(kp2_aligned, k2_w, k2_h)
 
         merged_data = []
         for i in range(len(keypoints_1)):
@@ -143,19 +141,44 @@ class MergeKeypoints(DWposeNodeBase):
             frame2 = kp2_aligned[i]
             
             new_frame = copy.deepcopy(frame1)
+            # Append people from frame2
             new_frame["people"].extend(frame2.get("people", []))
             merged_data.append(new_frame)
             
         return (merged_data,)
 
+class ReverseKeypoints(DWposeNodeBase):
+    RETURN_TYPES = ("POSE_KEYPOINT",)
+    RETURN_NAMES = ("pose_keypoints",)
+    FUNCTION = "execute"
+    CATEGORY = "DWposeDeluxe"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "pose_keypoints": ("POSE_KEYPOINT",),
+            }
+        }
+
+    def execute(self, pose_keypoints):
+        pose_keypoints = ensure_list(pose_keypoints)
+        if not pose_keypoints:
+            return ([],)
+        
+        reversed_data = list(reversed(pose_keypoints))
+        return (reversed_data,)
+
 NODE_CLASS_MAPPINGS = {
     "KeypointRangeFromBatch": KeypointRangeFromBatch,
     "BatchKeypoints": BatchKeypoints,
-    "MergeKeypoints": MergeKeypoints
+    "MergeKeypoints": MergeKeypoints,
+    "ReverseKeypoints": ReverseKeypoints
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "KeypointRangeFromBatch": "DWposeDeluxe Range From Batch",
     "BatchKeypoints": "DWposeDeluxe Batch Keypoints",
-    "MergeKeypoints": "DWposeDeluxe Merge Keypoints"
+    "MergeKeypoints": "DWposeDeluxe Merge Keypoints",
+    "ReverseKeypoints": "DWposeDeluxe Reverse Keypoints"
 }
