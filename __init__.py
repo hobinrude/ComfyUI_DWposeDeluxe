@@ -31,6 +31,11 @@ print(r"""
 
 def auto_install_and_check_tensorrt():
 
+    # Check Python version - TensorRT doesn't support 3.14+ yet
+    if sys.version_info.major == 3 and sys.version_info.minor >= 14:
+        logger.warning(f"Python {sys.version_info.major}.{sys.version_info.minor} detected. TensorRT is currently not supported for Python >= 3.14. Skipping auto-installation.")
+        return False
+
     try:
         import tensorrt
         logger.info(f"TensorRT {tensorrt.__version__} detected.")

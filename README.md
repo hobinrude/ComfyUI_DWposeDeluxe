@@ -55,7 +55,6 @@ A pimped up custom node for ComfyUI that integrates the DW-Pose (Denoising Whole
 ## Installation
 
 Use **ComfyUI-Manager** and search for **DWposeDeluxe**
-(it assumes CUDA 12.X by default - see `Dependencies`)
 
 or install manually:
 
@@ -78,7 +77,6 @@ or install manually:
    ```
 
 4. Install the required dependencies:
-    ( assumes CUDA 12.X by default )
    
    ```bash
    pip install -r requirements.txt
@@ -118,8 +116,8 @@ or install manually:
 This node requires the following Python libraries:
 
 ```
-tensorrt-cu12
 onnxruntime-gpu
+onnxruntime
 opencv-python
 matplotlib
 polygraphy
@@ -134,7 +132,8 @@ or install manually with:
 `pip install tensorrt-cu12`
 `pip install tensorrt-cu13`
 
-To use without GPU support a CPU version of `onnxruntime` is needed instead of `onnxruntime-gpu`. Manually change it in `requirements.txt`. Also remove TensorRT as it won't be used in CPU mode.
+**IMPORTANT: There are no tensorrt builds for python version >= 3.14**
+
 
 ## Changelog
 
