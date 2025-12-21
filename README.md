@@ -125,11 +125,12 @@ colored
 ```
 
 These can be installed by running `pip install -r requirements.txt` from within the node's directory.
-If you're using CUDA 11.X or 13.X modify the TensorRT version in `requirements.txt` accordingly.
 
-or install manually with:
+TensorRT will be installed automatically if not detected on first run (requires one more ComfyUI restart upon install. If you encounter any problems with auto install, please open an issue and try toinstall manually with:
 `pip install tensorrt-cu11`
+or
 `pip install tensorrt-cu12`
+or
 `pip install tensorrt-cu13`
 
 **IMPORTANT: There are no tensorrt builds for python version >= 3.14**
@@ -142,7 +143,6 @@ or install manually with:
   - Added 3 new keypoint editing nodes
   - Optimized memory load of main output creation method
   - Added description of each nodes function, inputs, parameters and outputs
-  - Fixed install directory name
 
 - 2025-12-09 v1.0.6
 
@@ -164,6 +164,14 @@ or install manually with:
   - Improved console logging
   - Separate node for frame numbers
 
+
+## Extras
+
+- **Keypoint Inspector** - A simple TUI app for detailed frame-by-frame inspection of KP dataset
+
+https://github.com/user-attachments/assets/f1870c3f-464f-4899-a58c-b31f1130ac20
+
+
 ## Known issues
 
 - UI is not optimized for Nodes 2.0
@@ -171,11 +179,13 @@ or install manually with:
 This node pack is still under development, so reporting any `Issues` is much apperciated.
 Same goes for additional feature requests, which are more than welcome in `Issues` section.
 
+
 ## Fun fact
 
 It works even on prehistoric setups like Core 2 Duo (direct successor of 486 processors) with 4GB of DDR3 🥹
 
 ![oldschool-test](https://github.com/user-attachments/assets/f9ad5bf0-4708-4fb1-8528-99d8069198e9)
+
 
 ## Other useful ComfyUI DW/OpenPose editing node packs:
 
